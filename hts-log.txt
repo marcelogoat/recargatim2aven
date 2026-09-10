@@ -1,0 +1,12 @@
+HTTrack3.49-2+htsswf+htsjava launched on Thu, 10 Sep 2026 15:06:20 at https://tim-credito.vercel.app/?gad_source=1&gad_campaignid=24232139272&gbraid=0AAAABEl726eyxMMVUoY5NEJqToatOfemU&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3bD471QStkQO9bjydh7GIQRyLvdXEl-EafhZCKmhvhE1BlIopvwUqRoCmJsQAvD_BwE +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar
+(winhttrack -qwC2%Ps2u1%s%uN0%I0p3DaK0H0%kf2A25000%f#f -F "Mozilla/4.5 (compatible; HTTrack 3.0x; Windows 98)" -%F "<!-- Mirrored from %s%s by HTTrack Website Copier/3.x [XR&CO'2014], %s -->" -%l "en, *" https://tim-credito.vercel.app/?gad_source=1&gad_campaignid=24232139272&gbraid=0AAAABEl726eyxMMVUoY5NEJqToatOfemU&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3bD471QStkQO9bjydh7GIQRyLvdXEl-EafhZCKmhvhE1BlIopvwUqRoCmJsQAvD_BwE -O1 "C:\Users\marcelo\Downloads\timrecaarga" +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+15:06:23	Error: 	Unable to save file C:/Users/marcelo/Downloads/timrecaarga/tim-credito.vercel.app/recarga: Permission denied
+
+HTTrack Website Copier/3.49-2 mirror complete in 3 seconds : 11 links scanned, 10 files written (1252587 bytes overall) [886474 bytes received at 295491 bytes/sec], 449993 bytes transferred using HTTP compression in 9 files, ratio 16%
+(1 errors, 0 warnings, 0 messages)
