@@ -12,7 +12,7 @@
         header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
         .menu-icon { display: flex; flex-direction: column; gap: 4px; }
         .menu-icon span { display: block; width: 24px; height: 2px; background-color: white; }
-        .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; }
+        .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; color: white; }
         
         main { padding: 0 20px 40px; }
         .promo-img { max-width: 100%; display: block; margin: 0 auto 20px; }
@@ -204,9 +204,22 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const phone = urlParams.get('phone');
+        const cpf = urlParams.get('cpf');
         if (phone) {
             document.getElementById('display-phone').textContent = phone;
         }
+
+        // Auto-scroll to the title, skipping the top banner promo image
+        window.addEventListener('load', () => {
+            const pageTitle = document.querySelector('.page-title');
+            if (pageTitle) {
+                const headerHeight = document.querySelector('header').offsetHeight;
+                window.scrollTo({
+                    top: pageTitle.offsetTop - headerHeight - 10,
+                    behavior: 'smooth'
+                });
+            }
+        });
 
         const gridItems = document.querySelectorAll('.grid-item');
         const vcPrice = document.querySelector('.vc-price');
@@ -251,7 +264,7 @@
         });
 
         const btnRecarregar = document.getElementById('btn-recarregar');
-        btnRecarregar.addEventListener('click', function() {
+        btnRecarregar.addEventListener('click', async function() {
             this.innerHTML = 'Gerando PIX <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
             this.style.opacity = '0.8';
             this.style.pointerEvents = 'none';
@@ -271,9 +284,26 @@
                 val = text;
             }
 
-            setTimeout(() => {
-                window.location.href = `pix.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(val)}`;
-            }, 2000);
+            try {
+                const response = await fetch('/api/pix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone || '', cpf: cpf || '', value: val })
+                });
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.paymentData) {
+                    sessionStorage.setItem('pixData', JSON.stringify(result.data.paymentData));
+                    window.location.href = `pix.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(val)}`;
+                } else {
+                    alert('Houve um erro ao gerar o seu PIX. Tente novamente.');
+                    window.location.reload();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Falha de conexão. Tente novamente.');
+                window.location.reload();
+            }
         });
     </script>
 </body>

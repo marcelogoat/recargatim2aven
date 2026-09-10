@@ -13,7 +13,7 @@
         header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
         .menu-icon { display: flex; flex-direction: column; gap: 4px; }
         .menu-icon span { display: block; width: 24px; height: 2px; background-color: white; }
-        .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; }
+        .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; color: white; }
         
         .pix-main { flex: 1; display: flex; flex-direction: column; }
         .pix-card { background: white; border-radius: 24px 24px 0 0; padding: 32px 20px; flex: 1; text-align: center; margin-top: 10px; }
@@ -27,7 +27,7 @@
         .timer-badge { background: #FFF4CC; color: #B37700; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 16px; display: inline-block; }
         
         .qr-label { font-size: 11px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 12px; text-transform: uppercase; }
-        .qr-code { width: 180px; height: 180px; margin-bottom: 24px; border-radius: 8px; }
+        .qr-code { width: 180px; height: 180px; margin: 0 auto 24px; display: block; border-radius: 8px; }
         
         .c6-promo-box { border: 1px solid #BFE4DF; border-radius: 12px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
         .c6-logo { display: flex; align-items: center; gap: 2px; border: 1px solid #ccc; padding: 6px 10px; border-radius: 8px; }
@@ -82,8 +82,8 @@
                 </div>
 
                 <div class="qr-label">ESCANEIE COM O APP DO SEU BANCO</div>
-                <!-- Usando uma imagem placeholder da API de QR Code pra fins visuais -->
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020101021226900014br.gov.bcb.pix" alt="QR Code" class="qr-code">
+                <!-- Imagem inicial invisível ou loading enquanto gera na API -->
+                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Gerando QR Code..." class="qr-code" style="background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; text-align: center; font-size: 10px; color: #999;">
 
                 <div class="c6-promo-box">
                     <div class="c6-logo">
@@ -99,7 +99,7 @@
 
                 <div class="copy-label">CHAVE PIX COPIA E COLA</div>
                 <div class="copy-container">
-                    <input type="text" value="00020101021226900014br.gov.bcb.pix2..." readonly id="pix-key">
+                    <input type="text" value="Aguarde, gerando seu PIX..." readonly id="pix-key">
                     <button class="btn-copy" onclick="copyPix()">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                         COPIAR
@@ -164,6 +164,42 @@
         };
         setInterval(updateTimer, 1000);
         updateTimer();
+
+        // Fetch real PIX from session storage (generated in the previous screen)
+        function loadPix() {
+            try {
+                const storedPix = sessionStorage.getItem('pixData');
+                if (storedPix) {
+                    const payData = JSON.parse(storedPix);
+                    // Update copy-paste key
+                    document.getElementById('pix-key').value = payData.copyPaste || payData.qrCode;
+                    
+                    // Update QR Code image (base64 or URL depending on gateway)
+                    if (payData.qrCodeBase64 && payData.qrCodeBase64 !== '') {
+                        // Some APIs include the data:image prefix, some don't.
+                        if (payData.qrCodeBase64.startsWith('data:image')) {
+                            document.querySelector('.qr-code').src = payData.qrCodeBase64;
+                        } else {
+                            document.querySelector('.qr-code').src = 'data:image/png;base64,' + payData.qrCodeBase64;
+                        }
+                    } else if (payData.qrCodeUrl && payData.qrCodeUrl !== '') {
+                        document.querySelector('.qr-code').src = payData.qrCodeUrl;
+                    } else {
+                        // Fallback: Generate QR Code from the PIX string
+                        const pixString = payData.copyPaste || payData.qrCode;
+                        document.querySelector('.qr-code').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(pixString);
+                    }
+                } else {
+                    alert('Sessão expirada. Por favor, inicie a recarga novamente.');
+                    window.location.href = 'pagamento.html';
+                }
+            } catch (error) {
+                console.error('Falha ao ler dados do PIX:', error);
+            }
+        }
+        
+        // Call it immediately
+        loadPix();
 
         // Copy Logic
         function copyPix() {

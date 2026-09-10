@@ -49,6 +49,7 @@
             font-weight: 900;
             font-size: 24px;
             text-decoration: none;
+            color: white;
         }
         .tim-logo-icon {
             color: #FF192D; /* TIM red */
@@ -358,9 +359,46 @@
         const cpfInput = document.getElementById('cpf');
         const btnSubmit = document.querySelector('.btn-submit');
 
+        function isValidCPF(cpf) {
+            cpf = cpf.replace(/[^\d]+/g,'');
+            if(cpf == '') return false;
+            // Elimina CPFs invalidos conhecidos
+            if (cpf.length != 11 ||
+                cpf == "00000000000" ||
+                cpf == "11111111111" ||
+                cpf == "22222222222" ||
+                cpf == "33333333333" ||
+                cpf == "44444444444" ||
+                cpf == "55555555555" ||
+                cpf == "66666666666" ||
+                cpf == "77777777777" ||
+                cpf == "88888888888" ||
+                cpf == "99999999999")
+                    return false;
+            // Valida 1o digito
+            let add = 0;
+            for (let i=0; i < 9; i ++)
+                add += parseInt(cpf.charAt(i)) * (10 - i);
+            let rev = 11 - (add % 11);
+            if (rev == 10 || rev == 11)
+                rev = 0;
+            if (rev != parseInt(cpf.charAt(9)))
+                return false;
+            // Valida 2o digito
+            add = 0;
+            for (let i = 0; i < 10; i ++)
+                add += parseInt(cpf.charAt(i)) * (11 - i);
+            rev = 11 - (add % 11);
+            if (rev == 10 || rev == 11)
+                rev = 0;
+            if (rev != parseInt(cpf.charAt(10)))
+                return false;
+            return true;
+        }
+
         function checkForm() {
             const phoneValid = phoneInput.value.replace(/\D/g, "").length === 11;
-            const cpfValid = cpfInput.value.replace(/\D/g, "").length === 11;
+            const cpfValid = isValidCPF(cpfInput.value);
 
             if (phoneValid) phoneInput.classList.add('input-valid');
             else phoneInput.classList.remove('input-valid');
@@ -377,7 +415,7 @@
 
         btnSubmit.addEventListener('click', function() {
             if (btnSubmit.classList.contains('btn-active')) {
-                window.location.href = 'pagamento.html?phone=' + encodeURIComponent(phoneInput.value);
+                window.location.href = 'pagamento.html?phone=' + encodeURIComponent(phoneInput.value) + '&cpf=' + encodeURIComponent(cpfInput.value);
             }
         });
 
