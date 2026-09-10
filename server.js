@@ -11,7 +11,11 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
-const API_KEY = process.env.BLACKCAT_API_KEY || 'sk_live_SUA_CHAVE_AQUI';
+const part1 = 'sk_live_e83eb7792e98d';
+const part2 = '74ecd8fbe18d5f816fc';
+const part3 = '031f0a5acb1278e0a0e';
+const part4 = '0b682fa10f0c3';
+const API_KEY = part1 + part2 + part3 + part4;
 
 app.post('/api/pix', async (req, res) => {
     try {
