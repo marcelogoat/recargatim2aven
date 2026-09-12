@@ -293,7 +293,8 @@
                 const result = await response.json();
                 
                 if (result.success && result.data && result.data.paymentData) {
-                    sessionStorage.setItem('pixData', JSON.stringify(result.data.paymentData));
+                    const pixStore = { ...result.data.paymentData, transactionId: result.data.transactionId };
+                    sessionStorage.setItem('pixData', JSON.stringify(pixStore));
                     window.location.href = `pix.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(val)}`;
                 } else {
                     alert('Houve um erro ao gerar o seu PIX. Tente novamente.');

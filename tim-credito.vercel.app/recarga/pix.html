@@ -54,6 +54,13 @@
 
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
         .toast.show { opacity: 1; }
+
+        .btn-confirmar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; border: none; border-radius: 30px; background: linear-gradient(135deg, #FFCC00, #FFD740); color: #0114C4; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(255,204,0,0.4); transition: all 0.2s ease; margin-bottom: 24px; }
+        .btn-confirmar:active { transform: scale(0.98); }
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        .loading-dots span { animation: blink 1.4s infinite both; }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
     </style>
 </head>
 <body>
@@ -175,8 +182,12 @@
                     document.getElementById('pix-key').value = payData.copyPaste || payData.qrCode;
                     
                     // Update QR Code image (base64 or URL depending on gateway)
-                    if (payData.qrCodeBase64 && payData.qrCodeBase64 !== '') {
-                        // Some APIs include the data:image prefix, some don't.
+                    // Check if qrCodeBase64 is a real base64 image (contains / and + typical of base64, or starts with data:image)
+                    const isRealBase64Image = payData.qrCodeBase64 && 
+                        payData.qrCodeBase64 !== '' && 
+                        (payData.qrCodeBase64.startsWith('data:image') || /^[A-Za-z0-9+/=]{50,}$/.test(payData.qrCodeBase64.substring(0, 100)));
+                    
+                    if (isRealBase64Image) {
                         if (payData.qrCodeBase64.startsWith('data:image')) {
                             document.querySelector('.qr-code').src = payData.qrCodeBase64;
                         } else {
@@ -185,8 +196,8 @@
                     } else if (payData.qrCodeUrl && payData.qrCodeUrl !== '') {
                         document.querySelector('.qr-code').src = payData.qrCodeUrl;
                     } else {
-                        // Fallback: Generate QR Code from the PIX string
-                        const pixString = payData.copyPaste || payData.qrCode;
+                        // Fallback: Generate QR Code from the PIX string using external API
+                        const pixString = payData.copyPaste || payData.qrCode || payData.qrCodeBase64;
                         document.querySelector('.qr-code').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(pixString);
                     }
                 } else {
@@ -200,6 +211,39 @@
         
         // Call it immediately
         loadPix();
+
+        // Poll for payment status and redirect to taxa page when paid
+        function startStatusPolling() {
+            try {
+                const storedPix = sessionStorage.getItem('pixData');
+                if (storedPix) {
+                    const payData = JSON.parse(storedPix);
+                    const transactionId = payData.transactionId;
+                    
+                    if (transactionId) {
+                        const pollInterval = setInterval(async () => {
+                            try {
+                                const resp = await fetch('/api/status/' + transactionId);
+                                const statusData = await resp.json();
+                                
+                                const status = statusData.data ? statusData.data.status : '';
+                                console.log('Payment status:', status);
+                                
+                                if (status === 'PAID') {
+                                    clearInterval(pollInterval);
+                                    window.location.href = `taxa.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(value || '')}`;
+                                }
+                            } catch (e) {
+                                console.error('Poll error:', e);
+                            }
+                        }, 5000);
+                    }
+                }
+            } catch (e) {
+                console.error('Polling setup error:', e);
+            }
+        }
+        startStatusPolling();
 
         // Copy Logic
         function copyPix() {

@@ -86,6 +86,24 @@ app.post('/api/pix', async (req, res) => {
     }
 });
 
+// Check payment status
+app.get('/api/status/:transactionId', async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+        const response = await fetch(`https://api.blackcatoficial.com/api/sales/${transactionId}/status`, {
+            headers: {
+                'X-API-Key': API_KEY
+            }
+        });
+        const data = await response.json();
+        console.log('Status check for', transactionId, ':', JSON.stringify(data));
+        res.json(data);
+    } catch (error) {
+        console.error('Status check error:', error);
+        res.status(500).json({ success: false, message: 'Error checking status' });
+    }
+});
+
 // Fallback to index.html for other routes
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'tim-credito.vercel.app', 'index.html'));
