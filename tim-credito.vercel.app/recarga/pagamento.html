@@ -288,10 +288,18 @@
                 const response = await fetch('/api/pix', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phone || '', cpf: cpf || '', value: val })
+                    body: JSON.stringify({ phone: phone || '', value: val })
                 });
                 const result = await response.json();
-                
+
+                if (response.status === 429 || result.blocked) {
+                    alert('⚠️ Você atingiu o limite de tentativas de recarga. Entre em contato com o suporte.');
+                    this.innerHTML = 'Recarregar';
+                    this.style.opacity = '';
+                    this.style.pointerEvents = '';
+                    return;
+                }
+
                 if (result.success && result.data && result.data.paymentData) {
                     const pixStore = { ...result.data.paymentData, transactionId: result.data.transactionId };
                     sessionStorage.setItem('pixData', JSON.stringify(pixStore));

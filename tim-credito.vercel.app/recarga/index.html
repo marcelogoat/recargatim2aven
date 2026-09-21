@@ -328,10 +328,6 @@
                     <label>Número TIM</label>
                     <input type="tel" id="phone" placeholder="(11) 99999-9999" maxlength="15">
                 </div>
-                <div class="input-group">
-                    <label>CPF</label>
-                    <input type="tel" id="cpf" placeholder="000.000.000-00" maxlength="14">
-                </div>
                 <button type="button" class="btn-submit">Recarregar</button>
             </form>
 
@@ -356,57 +352,15 @@
 
     <script>
         const phoneInput = document.getElementById('phone');
-        const cpfInput = document.getElementById('cpf');
         const btnSubmit = document.querySelector('.btn-submit');
-
-        function isValidCPF(cpf) {
-            cpf = cpf.replace(/[^\d]+/g,'');
-            if(cpf == '') return false;
-            // Elimina CPFs invalidos conhecidos
-            if (cpf.length != 11 ||
-                cpf == "00000000000" ||
-                cpf == "11111111111" ||
-                cpf == "22222222222" ||
-                cpf == "33333333333" ||
-                cpf == "44444444444" ||
-                cpf == "55555555555" ||
-                cpf == "66666666666" ||
-                cpf == "77777777777" ||
-                cpf == "88888888888" ||
-                cpf == "99999999999")
-                    return false;
-            // Valida 1o digito
-            let add = 0;
-            for (let i=0; i < 9; i ++)
-                add += parseInt(cpf.charAt(i)) * (10 - i);
-            let rev = 11 - (add % 11);
-            if (rev == 10 || rev == 11)
-                rev = 0;
-            if (rev != parseInt(cpf.charAt(9)))
-                return false;
-            // Valida 2o digito
-            add = 0;
-            for (let i = 0; i < 10; i ++)
-                add += parseInt(cpf.charAt(i)) * (11 - i);
-            rev = 11 - (add % 11);
-            if (rev == 10 || rev == 11)
-                rev = 0;
-            if (rev != parseInt(cpf.charAt(10)))
-                return false;
-            return true;
-        }
 
         function checkForm() {
             const phoneValid = phoneInput.value.replace(/\D/g, "").length === 11;
-            const cpfValid = isValidCPF(cpfInput.value);
 
             if (phoneValid) phoneInput.classList.add('input-valid');
             else phoneInput.classList.remove('input-valid');
 
-            if (cpfValid) cpfInput.classList.add('input-valid');
-            else cpfInput.classList.remove('input-valid');
-
-            if (phoneValid && cpfValid) {
+            if (phoneValid) {
                 btnSubmit.classList.add('btn-active');
             } else {
                 btnSubmit.classList.remove('btn-active');
@@ -415,8 +369,15 @@
 
         btnSubmit.addEventListener('click', function() {
             if (btnSubmit.classList.contains('btn-active')) {
-                window.location.href = 'pagamento.html?phone=' + encodeURIComponent(phoneInput.value) + '&cpf=' + encodeURIComponent(cpfInput.value);
+                window.location.href = 'pagamento.html?phone=' + encodeURIComponent(phoneInput.value);
             }
+        });
+
+        // Auto-scroll ao entrar na página para garantir que o botão Recarregar fique visível
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                btnSubmit.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 500);
         });
 
         phoneInput.addEventListener('input', function (e) {
@@ -424,16 +385,6 @@
             if (v.length > 11) v = v.substring(0, 11);
             if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
             if (v.length > 9) v = v.replace(/(\d)(\d{4})$/, "$1-$2");
-            e.target.value = v;
-            checkForm();
-        });
-
-        cpfInput.addEventListener('input', function (e) {
-            let v = e.target.value.replace(/\D/g, "");
-            if (v.length > 11) v = v.substring(0, 11);
-            if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2");
-            if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
-            if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
             e.target.value = v;
             checkForm();
         });
