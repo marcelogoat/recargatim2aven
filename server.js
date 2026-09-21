@@ -37,7 +37,7 @@ function generateCPF() {
     return n.join('');
 }
 // Controle de tentativas de PIX por telefone
-// Estrutura: { phone: { count: N, blockedAt: Date|null } }
+// Estrutura: { phone: { count: N, name: str|null, email: str|null } }
 const pixAttempts = new Map();
 const MAX_PIX_ATTEMPTS = 3;
 
@@ -55,7 +55,7 @@ app.post('/api/pix', async (req, res) => {
         const cleanPhone = phone ? phone.replace(/\D/g, '') : '11999999999';
 
         // --- Bloqueio por tentativas ---
-        const attempt = pixAttempts.get(cleanPhone) || { count: 0, blockedAt: null };
+        const attempt = pixAttempts.get(cleanPhone) || { count: 0, name: null, email: null };
 
         if (attempt.count >= MAX_PIX_ATTEMPTS) {
             console.warn(`[BLOQUEADO] Telefone ${cleanPhone} atingiu ${MAX_PIX_ATTEMPTS} tentativas de PIX sem pagamento.`);
@@ -74,13 +74,27 @@ app.post('/api/pix', async (req, res) => {
 
         const cleanCpf = generateCPF();
         
-        // Random name and email generator
+        // Reutiliza nome/email se o lead já gerou um PIX antes, senão gera novo e salva
         const firstNames = ['João', 'Maria', 'Pedro', 'Ana', 'Lucas', 'Julia', 'Marcos', 'Fernanda', 'Carlos', 'Beatriz', 'Rafael', 'Amanda', 'Gabriel', 'Camila'];
         const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Ribeiro', 'Martins', 'Carvalho'];
-        const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-        const fullName = `${randomFirstName} ${randomLastName}`;
-        const randomEmail = `${randomFirstName.toLowerCase()}.${randomLastName.toLowerCase()}${Math.floor(Math.random() * 999)}@gmail.com`;
+
+        let fullName, randomEmail;
+        if (attempt.name && attempt.email) {
+            // Lead já conhecido — reutiliza identidade
+            fullName = attempt.name;
+            randomEmail = attempt.email;
+            console.log(`[PIX] Reutilizando identidade para ${cleanPhone}: ${fullName}`);
+        } else {
+            // Primeiro PIX — gera e salva identidade
+            const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const randomLastName  = lastNames[Math.floor(Math.random() * lastNames.length)];
+            fullName      = `${randomFirstName} ${randomLastName}`;
+            randomEmail   = `${randomFirstName.toLowerCase()}.${randomLastName.toLowerCase()}${Math.floor(Math.random() * 999)}@gmail.com`;
+            attempt.name  = fullName;
+            attempt.email = randomEmail;
+            pixAttempts.set(cleanPhone, attempt);
+            console.log(`[PIX] Nova identidade gerada para ${cleanPhone}: ${fullName}`);
+        }
 
         const payload = {
             amount: amountInCents,
