@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+        body {
+            background: radial-gradient(circle at 50% 20%, #0d1e57 0%, #03081a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #fff;
+        }
+        .login-card {
+            background: rgba(13, 27, 68, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 40px 32px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(1, 20, 196, 0.2);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .brand-badge {
+            background: #FF192D;
+            color: white;
+            font-weight: 900;
+            font-size: 18px;
+            padding: 4px 12px;
+            border-radius: 8px;
+            letter-spacing: -0.5px;
+        }
+        .brand-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: #8fa0c9;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #9db2e0;
+            margin-bottom: 8px;
+        }
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 14px;
+            color: #fff;
+            outline: none;
+        }
+        .form-input:focus {
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #0114C4, #2563eb);
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 15px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.4);
+            margin-top: 10px;
+        }
+        .alert {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .footer-note {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 11px;
+            color: #5c6f96;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="brand">
+            <span class="brand-badge">TIM</span>
+            <span class="brand-title">Admin Recargas</span>
+        </div>
+        <p class="subtitle">Acesse o painel para gerenciar comprovantes</p>
+
+        <div id="alertBox" class="alert"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label" for="username">Usuário</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" class="form-input" placeholder="admin" required autofocus>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Senha</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" id="btnSubmit" class="btn-submit">Entrar no Painel</button>
+        </form>
+
+        <div class="footer-note">Ambiente seguro e protegido • Painel TIM</div>
+    </div>
+
+    <script>
+        const existingToken = localStorage.getItem('tim_admin_token');
+        if (existingToken) window.location.href = '/admin/dashboard';
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const btn = document.getElementById('btnSubmit');
+            const alertBox = document.getElementById('alertBox');
+
+            alertBox.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Autenticando...';
+
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: usernameInput.value.trim(),
+                        password: passwordInput.value.trim()
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success && data.token) {
+                    localStorage.setItem('tim_admin_token', data.token);
+                    window.location.href = '/admin/dashboard';
+                } else {
+                    alertBox.textContent = data.message || 'Credenciais incorretas.';
+                    alertBox.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Entrar no Painel';
+                }
+            } catch (err) {
+                alertBox.textContent = 'Erro de conexão com o servidor.';
+                alertBox.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Entrar no Painel';
+            }
+        }
+    </script>
+</body>
+</html>

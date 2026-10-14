@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const multer = require('multer');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 
@@ -15,17 +18,58 @@ const AVEN_API_KEY = process.env.AVEN_API_KEY || '7obEdFjeJxUiaOd1wuo8bt7QcjHS3L
 const AVEN_TOKENIZATION_KEY = process.env.AVEN_TOKENIZATION_KEY || '1ABcTMX2IN0JtveSRPqfbJFz0NH2XGZ9LmQg7Lr_NEE';
 const AVEN_BASE_URL = 'https://api.avenpayments.com/v1';
 
+// Admin credentials
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'pizza2024';
+const adminTokens = new Set();
+
+// Multer - upload de comprovantes
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const multerStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.jpg';
+        cb(null, Date.now() + '-' + Math.random().toString(36).substring(2,8) + ext);
+    }
+});
+const upload = multer({
+    storage: multerStorage,
+    limits: { fileSize: 15 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+        cb(null, allowed.includes(file.mimetype));
+    }
+});
+
+// Persistencia JSON para comprovantes
+const DATA_FILE = path.join(uploadsDir, 'data.json');
+function readComprovantes() {
+    try { if (fs.existsSync(DATA_FILE)) return JSON.parse(fs.readFileSync(DATA_FILE,'utf8')); } catch(e) {}
+    return [];
+}
+function saveComprovantes(data) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data,null,2), 'utf8');
+}
+
+// Middleware de autenticacao admin
+function adminAuth(req, res, next) {
+    const auth = req.headers['authorization'] || '';
+    const token = auth.replace('Bearer ','').trim() || req.query.token || '';
+    if (token && adminTokens.has(token)) return next();
+    return res.status(401).json({ success: false, message: 'Nao autorizado' });
+}
+
 // Gera um CPF válido aleatório
 function generateCPF() {
     const rand = () => Math.floor(Math.random() * 9);
     let n = Array.from({ length: 9 }, rand);
 
-    // Calcula 1º dígito verificador
     let sum = n.reduce((acc, val, i) => acc + val * (10 - i), 0);
     let d1 = 11 - (sum % 11);
     if (d1 >= 10) d1 = 0;
 
-    // Calcula 2º dígito verificador
     n.push(d1);
     sum = n.reduce((acc, val, i) => acc + val * (11 - i), 0);
     let d2 = 11 - (sum % 11);
@@ -35,92 +79,59 @@ function generateCPF() {
     return n.join('');
 }
 
-// Controle de tentativas de PIX por telefone
-// Estrutura: { phone: { count: N, name: str|null, email: str|null } }
 const pixAttempts = new Map();
-const MAX_PIX_ATTEMPTS = 3;
 
-// Retorna configurações públicas (ex: chave de tokenização)
+// Retorna configurações públicas
 app.get('/api/config', (req, res) => {
-    res.json({
-        tokenizationKey: AVEN_TOKENIZATION_KEY
-    });
+    res.json({ tokenizationKey: AVEN_TOKENIZATION_KEY });
 });
 
 app.post('/api/pix', async (req, res) => {
     try {
         const { value, phone } = req.body;
         
-        // Convert value string like "20,00" or "24,90" to integer in cents (e.g. 2000, 2490)
-        let amountInCents = 2000; // default 20.00
+        let amount = 2000;
         if (value) {
-            const cleanValue = value.replace('R$', '').trim().replace(',', '.');
-            amountInCents = Math.round(parseFloat(cleanValue) * 100);
+            const cleanVal = value.toString().replace('R$', '').trim().replace(',', '.');
+            amount = Math.round(parseFloat(cleanVal) * 100);
         }
 
-        const cleanPhone = phone ? phone.replace(/\D/g, '') : '11999999999';
+        const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+        const payerPhone = cleanPhone ? `+55${cleanPhone}` : '+5511999999999';
 
-        // --- Bloqueio por tentativas ---
-        const attempt = pixAttempts.get(cleanPhone) || { count: 0, name: null, email: null };
-
-        if (attempt.count >= MAX_PIX_ATTEMPTS) {
-            console.warn(`[BLOQUEADO] Telefone ${cleanPhone} atingiu ${MAX_PIX_ATTEMPTS} tentativas de PIX sem pagamento.`);
-            return res.status(429).json({
-                success: false,
-                blocked: true,
-                message: 'Limite de tentativas atingido. Entre em contato com o suporte.'
-            });
-        }
-
-        // Incrementa contador ANTES de chamar a API
+        let attempt = pixAttempts.get(cleanPhone) || { count: 0, name: null, email: null };
         attempt.count += 1;
-        pixAttempts.set(cleanPhone, attempt);
-        console.log(`[PIX] Telefone ${cleanPhone} — tentativa ${attempt.count}/${MAX_PIX_ATTEMPTS}`);
-        // --------------------------------
 
-        const cleanCpf = generateCPF();
-        
-        // Reutiliza nome/email se o lead já gerou um PIX antes, senão gera novo e salva
-        const firstNames = ['João', 'Maria', 'Pedro', 'Ana', 'Lucas', 'Julia', 'Marcos', 'Fernanda', 'Carlos', 'Beatriz', 'Rafael', 'Amanda', 'Gabriel', 'Camila'];
-        const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Ribeiro', 'Martins', 'Carvalho'];
-
-        let fullName, randomEmail;
-        if (attempt.name && attempt.email) {
-            // Lead já conhecido — reutiliza identidade
-            fullName = attempt.name;
-            randomEmail = attempt.email;
-            console.log(`[PIX] Reutilizando identidade para ${cleanPhone}: ${fullName}`);
-        } else {
-            // Primeiro PIX — gera e salva identidade
-            const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-            const randomLastName  = lastNames[Math.floor(Math.random() * lastNames.length)];
-            fullName      = `${randomFirstName} ${randomLastName}`;
-            randomEmail   = `${randomFirstName.toLowerCase()}.${randomLastName.toLowerCase()}${Math.floor(Math.random() * 999)}@gmail.com`;
-            attempt.name  = fullName;
-            attempt.email = randomEmail;
-            pixAttempts.set(cleanPhone, attempt);
-            console.log(`[PIX] Nova identidade gerada para ${cleanPhone}: ${fullName}`);
+        if (!attempt.name) {
+            const firstNames = ['Lucas', 'Mateus', 'Gabriel', 'Rafael', 'Bruno', 'Thiago', 'Felipe', 'Rodrigo', 'Leonardo', 'Guilherme'];
+            const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes'];
+            const randomFirst = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const randomLast = lastNames[Math.floor(Math.random() * lastNames.length)];
+            attempt.name = `${randomFirst} ${randomLast}`;
+            attempt.email = `${randomFirst.toLowerCase()}.${randomLast.toLowerCase()}${Math.floor(Math.random() * 899 + 100)}@gmail.com`;
         }
+        pixAttempts.set(cleanPhone, attempt);
 
         const externalRef = `tim_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        const cleanCpf = generateCPF();
 
         const payload = {
-            amount: amountInCents,
+            amount: amount,
             currency: 'BRL',
             method: 'PIX',
-            description: 'Recarga TIM',
+            description: `Recarga TIM - ${cleanPhone || 'Linha Celular'}`,
             externalRef: externalRef,
             payer: {
-                name: fullName,
+                name: attempt.name,
                 taxId: cleanCpf,
-                email: randomEmail,
-                phone: cleanPhone
+                email: attempt.email,
+                phone: cleanPhone || '11999999999'
             },
             items: [
                 {
                     quantity: 1,
                     name: 'Recarga TIM',
-                    price: amountInCents,
+                    price: amount,
                     type: 'DIGITAL'
                 }
             ]
@@ -129,28 +140,38 @@ app.post('/api/pix', async (req, res) => {
         const response = await fetch(`${AVEN_BASE_URL}/payment`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${AVEN_API_KEY}`
+                'Authorization': `Bearer ${AVEN_API_KEY}`,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        const textResponse = await response.text();
+        let data = {};
+        try {
+            data = JSON.parse(textResponse);
+        } catch (e) {
+            console.error('[AVEN] Resposta não-JSON recebida:', textResponse);
+        }
 
-        if (response.ok && data?.id) {
-            console.log('[AVEN] Pagamento PIX criado com sucesso:', data.id);
-            const copypaste = data.data?.copypaste || '';
-            const qrCodeUrl = copypaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copypaste)}` : '';
+        if (response.ok && (data.id || data.paymentId)) {
+            const paymentId = data.id || data.paymentId;
+            let copyPaste = data.data?.copypaste || data.pix?.qrcode || data.pix?.code || data.copypaste || data.qrCode || '';
+            const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+
+            console.log('[AVEN] PIX criado com sucesso:', paymentId);
 
             res.json({
                 success: true,
                 data: {
-                    transactionId: data.id,
-                    status: data.status,
+                    id: paymentId,
+                    transactionId: paymentId,
+                    status: data.status || 'PENDING',
                     paymentData: {
-                        copyPaste: copypaste,
-                        qrCode: copypaste,
-                        copypaste: copypaste,
+                        transactionId: paymentId,
+                        copyPaste: copyPaste,
+                        copypaste: copyPaste,
+                        qrCode: copyPaste,
                         qrCodeUrl: qrCodeUrl
                     },
                     aven: data
@@ -164,7 +185,6 @@ app.post('/api/pix', async (req, res) => {
                 details: data
             });
         }
-
     } catch (error) {
         console.error('Server error:', error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -175,62 +195,130 @@ app.post('/api/pix', async (req, res) => {
 app.get('/api/status/:transactionId', async (req, res) => {
     try {
         const { transactionId } = req.params;
-        const { phone } = req.query; // opcional: ?phone=11999999999
+        const { phone } = req.query;
         
         const response = await fetch(`${AVEN_BASE_URL}/payment/${transactionId}`, {
-            headers: {
-                'Authorization': `Bearer ${AVEN_API_KEY}`
-            }
+            headers: { 'Authorization': `Bearer ${AVEN_API_KEY}` }
         });
-        const data = await response.json();
-        console.log(`[AVEN] Status check para ${transactionId}:`, data?.status);
+        const text = await response.text();
+        let data = {};
+        try { data = JSON.parse(text); } catch(e) {}
 
-        // Se pagamento confirmado, remove o bloqueio do telefone
         if ((data?.status === 'PAID' || data?.data?.status === 'PAID') && phone) {
             const cleanPhone = phone.replace(/\D/g, '');
             pixAttempts.delete(cleanPhone);
-            console.log(`[DESBLOQUEADO] Pagamento confirmado — telefone ${cleanPhone} liberado.`);
         }
 
         res.json({
             success: response.ok,
-            data: {
-                status: data.status,
-                id: data.id,
-                ...data
-            }
+            data: { status: data.status || 'PENDING', id: data.id || transactionId, ...data }
         });
     } catch (error) {
-        console.error('Status check error:', error);
         res.status(500).json({ success: false, message: 'Error checking status' });
     }
 });
 
-// Check status para compatibilidade com transitions.js
 app.get('/api/check_status', async (req, res) => {
     try {
         const transactionId = req.query.id;
-        if (!transactionId) {
-            return res.status(400).json({ success: false, message: 'Missing transaction id' });
-        }
+        if (!transactionId) return res.status(400).json({ success: false, message: 'Missing transaction id' });
         const response = await fetch(`${AVEN_BASE_URL}/payment/${transactionId}`, {
-            headers: {
-                'Authorization': `Bearer ${AVEN_API_KEY}`
-            }
+            headers: { 'Authorization': `Bearer ${AVEN_API_KEY}` }
         });
         const data = await response.json();
         const isPaid = data.status === 'PAID';
-        res.json({
-            status: isPaid ? 'approved' : (data.status || 'pending'),
-            data: data
-        });
+        res.json({ status: isPaid ? 'approved' : (data.status || 'pending'), data: data });
     } catch (error) {
-        console.error('Check status error:', error);
         res.status(500).json({ success: false, message: 'Error checking status' });
     }
 });
 
-// Fallback to index.html for other routes
+// Upload comprovante
+app.post('/api/upload-comprovante', upload.single('comprovante'), (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success:false, message:'Nenhum arquivo enviado' });
+        const { phone, transactionId, value, type } = req.body;
+        const record = {
+            id: crypto.randomUUID(),
+            phone: phone || '',
+            transactionId: transactionId || '',
+            value: value || '',
+            type: type || 'recarga',
+            fileName: req.file.filename,
+            originalName: req.file.originalname,
+            mimeType: req.file.mimetype,
+            fileSize: req.file.size,
+            uploadTime: new Date().toISOString(),
+            status: 'pending'
+        };
+        const comprovantes = readComprovantes();
+        comprovantes.unshift(record);
+        saveComprovantes(comprovantes);
+        res.json({ success:true, message:'Comprovante enviado com sucesso!', id:record.id });
+    } catch(e) {
+        res.status(500).json({ success:false, message:'Erro ao salvar comprovante' });
+    }
+});
+
+// Admin login
+app.post('/api/admin/login', (req, res) => {
+    const { username, password } = req.body;
+    if (username === ADMIN_USER && password === ADMIN_PASS) {
+        const token = crypto.randomBytes(32).toString('hex');
+        adminTokens.add(token);
+        res.json({ success:true, token });
+    } else {
+        res.status(401).json({ success:false, message:'Credenciais invalidas' });
+    }
+});
+
+app.post('/api/admin/logout', adminAuth, (req, res) => {
+    const token = (req.headers['authorization'] || '').replace('Bearer ','').trim();
+    adminTokens.delete(token);
+    res.json({ success:true });
+});
+
+app.get('/api/admin/comprovantes', adminAuth, (req, res) => {
+    const comprovantes = readComprovantes();
+    res.json({ success:true, data:comprovantes, total:comprovantes.length });
+});
+
+app.patch('/api/admin/comprovantes/:id/status', adminAuth, (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!['confirmed','rejected','pending'].includes(status))
+        return res.status(400).json({ success:false, message:'Status invalido' });
+    const comprovantes = readComprovantes();
+    const idx = comprovantes.findIndex(c => c.id === id);
+    if (idx === -1) return res.status(404).json({ success:false, message:'Nao encontrado' });
+    comprovantes[idx].status = status;
+    comprovantes[idx].updatedAt = new Date().toISOString();
+    saveComprovantes(comprovantes);
+    res.json({ success:true, data:comprovantes[idx] });
+});
+
+app.get('/api/admin/comprovantes/:id/file', adminAuth, (req, res) => {
+    const comprovantes = readComprovantes();
+    const record = comprovantes.find(c => c.id === req.params.id);
+    if (!record) return res.status(404).send('Nao encontrado');
+    res.sendFile(path.join(uploadsDir, record.fileName));
+});
+
+app.delete('/api/admin/comprovantes/:id', adminAuth, (req, res) => {
+    let comprovantes = readComprovantes();
+    const record = comprovantes.find(c => c.id === req.params.id);
+    if (!record) return res.status(404).json({ success:false, message:'Nao encontrado' });
+    try { fs.unlinkSync(path.join(uploadsDir, record.fileName)); } catch(e) {}
+    comprovantes = comprovantes.filter(c => c.id !== req.params.id);
+    saveComprovantes(comprovantes);
+    res.json({ success:true });
+});
+
+// Admin pages
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname,'tim-credito.vercel.app','admin','index.html')));
+app.get('/admin/dashboard', (req, res) => res.sendFile(path.join(__dirname,'tim-credito.vercel.app','admin','dashboard.html')));
+
+// Fallback to index.html
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'tim-credito.vercel.app', 'index.html'));
 });
@@ -240,4 +328,5 @@ app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`Gateway configurado: Aven Payments`);
     console.log(`Acesse: http://localhost:${PORT}`);
+    console.log(`Admin:  http://localhost:${PORT}/admin`);
 });
