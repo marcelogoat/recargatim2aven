@@ -23,9 +23,14 @@ const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'pizza2024';
 const adminTokens = new Set();
 
-// Multer - upload de comprovantes
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Multer - upload de comprovantes (compativel com Vercel /tmp e local)
+const isVercel = process.env.VERCEL === '1' || !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.LAMBDA_TASK_ROOT;
+const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
+try {
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+} catch (e) {
+    console.error('Failed to create uploadsDir:', e);
+}
 
 const multerStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
@@ -50,7 +55,11 @@ function readComprovantes() {
     return [];
 }
 function saveComprovantes(data) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data,null,2), 'utf8');
+    try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(data,null,2), 'utf8');
+    } catch(e) {
+        console.error('Failed to save comprovantes:', e);
+    }
 }
 
 // Middleware de autenticacao admin
@@ -323,10 +332,14 @@ app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'tim-credito.vercel.app', 'index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-    console.log(`Gateway configurado: Aven Payments`);
-    console.log(`Acesse: http://localhost:${PORT}`);
-    console.log(`Admin:  http://localhost:${PORT}/admin`);
-});
+if (!isVercel) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Servidor rodando na porta ${PORT}`);
+        console.log(`Gateway configurado: Aven Payments`);
+        console.log(`Acesse: http://localhost:${PORT}`);
+        console.log(`Admin:  http://localhost:${PORT}/admin`);
+    });
+}
+
+module.exports = app;
