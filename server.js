@@ -14,14 +14,34 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
-const AVEN_API_KEY = process.env.AVEN_API_KEY || '7obEdFjeJxUiaOd1wuo8bt7QcjHS3LPJOj9ANVHHoFU';
-const AVEN_TOKENIZATION_KEY = process.env.AVEN_TOKENIZATION_KEY || '1ABcTMX2IN0JtveSRPqfbJFz0NH2XGZ9LmQg7Lr_NEE';
+const AVEN_API_KEY = process.env.AVEN_API_KEY || '3BhRxPFdU2beyFoiX23eweJhc_ILlhs4JSYsNAYCcBk';
+const AVEN_TOKENIZATION_KEY = process.env.AVEN_TOKENIZATION_KEY || '0Z4j53qjhkXy7GKNfySrspNkfVjWzDe01j9SYtd4mxA';
 const AVEN_BASE_URL = 'https://api.avenpayments.com/v1';
 
 // Admin credentials
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'pizza2024';
-const adminTokens = new Set();
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'tim_admin_secure_signature_key_2026';
+
+function createAdminToken() {
+    const payload = `admin_${Date.now()}`;
+    const hmac = crypto.createHmac('sha256', ADMIN_SECRET).update(payload).digest('hex');
+    return `${Buffer.from(payload).toString('base64url')}.${hmac}`;
+}
+
+function isValidAdminToken(token) {
+    try {
+        if (!token || typeof token !== 'string') return false;
+        const parts = token.split('.');
+        if (parts.length !== 2) return false;
+        const [payloadB64, hmac] = parts;
+        const payload = Buffer.from(payloadB64, 'base64url').toString('utf8');
+        const expectedHmac = crypto.createHmac('sha256', ADMIN_SECRET).update(payload).digest('hex');
+        return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expectedHmac));
+    } catch(e) {
+        return false;
+    }
+}
 
 // Multer - upload de comprovantes (compativel com Vercel /tmp e local)
 const isVercel = process.env.VERCEL === '1' || !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.LAMBDA_TASK_ROOT;
@@ -66,7 +86,7 @@ function saveComprovantes(data) {
 function adminAuth(req, res, next) {
     const auth = req.headers['authorization'] || '';
     const token = auth.replace('Bearer ','').trim() || req.query.token || '';
-    if (token && adminTokens.has(token)) return next();
+    if (token && isValidAdminToken(token)) return next();
     return res.status(401).json({ success: false, message: 'Nao autorizado' });
 }
 
@@ -273,8 +293,7 @@ app.post('/api/upload-comprovante', upload.single('comprovante'), (req, res) => 
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     if (username === ADMIN_USER && password === ADMIN_PASS) {
-        const token = crypto.randomBytes(32).toString('hex');
-        adminTokens.add(token);
+        const token = createAdminToken();
         res.json({ success:true, token });
     } else {
         res.status(401).json({ success:false, message:'Credenciais invalidas' });
