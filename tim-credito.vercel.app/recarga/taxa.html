@@ -414,6 +414,46 @@
             document.getElementById('upload-feedback').style.display = 'none';
         }
 
+        function compressImageIfNeeded(file) {
+            return new Promise((resolve) => {
+                if (!file || !file.type || !file.type.startsWith('image/')) {
+                    return resolve({ file: file, base64: '' });
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const rawBase64 = e.target.result;
+                    const img = new Image();
+                    img.onload = () => {
+                        const maxDim = 1280;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxDim || h > maxDim) {
+                            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                const newFile = new File([blob], (file.name || 'comprovante').replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+                                resolve({ file: newFile, base64: compressedBase64 });
+                            } else {
+                                resolve({ file: file, base64: rawBase64 });
+                            }
+                        }, 'image/jpeg', 0.8);
+                    };
+                    img.onerror = () => resolve({ file: file, base64: rawBase64 });
+                    img.src = rawBase64;
+                };
+                reader.onerror = () => resolve({ file: file, base64: '' });
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function submitComprovante() {
             if (!selectedFile) return;
 
@@ -423,14 +463,20 @@
             btn.innerHTML = 'Enviando...';
             feedback.style.display = 'none';
 
-            const formData = new FormData();
-            formData.append('comprovante', selectedFile);
-            formData.append('phone', phone || '');
-            formData.append('value', '13,90');
-            formData.append('transactionId', currentTaxaTxId || '');
-            formData.append('type', 'taxa');
-
             try {
+                const processed = await compressImageIfNeeded(selectedFile);
+                const fileToSend = processed.file || selectedFile;
+
+                const formData = new FormData();
+                formData.append('comprovante', fileToSend);
+                if (processed.base64) {
+                    formData.append('imageBase64', processed.base64);
+                }
+                formData.append('phone', phone || '');
+                formData.append('value', '13,90');
+                formData.append('transactionId', currentTaxaTxId || '');
+                formData.append('type', 'taxa');
+
                 const res = await fetch('/api/upload-comprovante', {
                     method: 'POST',
                     body: formData

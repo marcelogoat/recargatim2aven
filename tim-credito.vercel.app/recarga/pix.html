@@ -58,23 +58,74 @@
         .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
         .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-        /* Comprovante Upload Box - Compact & Destacado */
-        .upload-card { background: #F0F5FF; border: 2px dashed #0114C4; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; text-align: center; transition: all 0.2s ease; }
-        .upload-card:hover { background: #E8F0FE; }
-        .upload-card-title { font-size: 13px; font-weight: 800; color: #0114C4; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 2px; }
-        .upload-card-sub { font-size: 11px; color: #475569; margin-bottom: 8px; line-height: 1.3; }
-        .dropzone-inner { cursor: pointer; padding: 8px 12px; border-radius: 8px; background: white; border: 1px solid #CBD5E1; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .dropzone-inner:hover { border-color: #0114C4; }
-        .dropzone-icon { color: #0114C4; display: flex; align-items: center; }
-        .dropzone-text { font-size: 12px; font-weight: 700; color: #0114C4; }
-        .dropzone-hint { font-size: 10px; color: #64748B; }
-        .file-selected-box { display: flex; align-items: center; justify-content: space-between; background: #EBF3FF; border: 1px solid #BBD6FB; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; color: #0114C4; text-align: left; }
-        .btn-enviar-comp { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 8px; padding: 10px; border: none; border-radius: 8px; background: #0114C4; color: white; font-size: 13px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 3px 10px rgba(1, 20, 196, 0.25); }
-        .btn-enviar-comp:hover { background: #000FA0; }
-        .btn-enviar-comp:disabled { opacity: 0.6; cursor: not-allowed; }
-        .upload-feedback { margin-top: 8px; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; text-align: center; }
-        .upload-feedback.success { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; }
-        .upload-feedback.error { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
+        /* Passo a Passo Como Pagar o PIX */
+        .pix-steps-card {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        .pix-steps-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #0114C4;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .pix-steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .pix-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .pix-step-badge {
+            background: #0114C4;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            flex-shrink: 0;
+            margin-top: 1px;
+            box-shadow: 0 2px 6px rgba(1, 20, 196, 0.25);
+        }
+        .pix-step-content {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #334155;
+        }
+        .pix-step-content strong {
+            color: #0F172A;
+            font-weight: 700;
+        }
+        .pix-steps-footer {
+            margin-top: 14px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            background: #DCFCE7;
+            border: 1px solid #86EFAC;
+            font-size: 11px;
+            color: #166534;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.35;
+        }
     </style>
 </head>
 <body>
@@ -119,34 +170,41 @@
                     </button>
                 </div>
 
-                <!-- Comprovante Upload Box (Posicionado diretamente abaixo do Copia e Cola) -->
-                <div class="upload-card">
-                    <div class="upload-card-title">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0114C4" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        <span>Já pagou? Anexe o comprovante</span>
+                <!-- Passo a Passo de Como Pagar o PIX -->
+                <div class="pix-steps-card">
+                    <div class="pix-steps-header">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0114C4" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>Como pagar com PIX:</span>
                     </div>
-                    <div class="upload-card-sub">Para liberação imediata dos seus créditos na linha:</div>
-
-                    <input type="file" id="comp-file-input" accept="image/*,application/pdf" style="display: none;" onchange="onFileSelected(event)">
-
-                    <div class="dropzone-inner" id="dropzone-box" onclick="document.getElementById('comp-file-input').click()">
-                        <div class="dropzone-icon">
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <div class="pix-steps-list">
+                        <div class="pix-step">
+                            <div class="pix-step-badge">1</div>
+                            <div class="pix-step-content">
+                                Clique no botão <strong>COPIAR</strong> acima para copiar o código Pix (ou aponte a câmera para o QR Code).
+                            </div>
                         </div>
-                        <span class="dropzone-text">Toque para selecionar foto ou PDF</span>
+                        <div class="pix-step">
+                            <div class="pix-step-badge">2</div>
+                            <div class="pix-step-content">
+                                Abra o <strong>aplicativo do seu banco</strong> ou instituição financeira.
+                            </div>
+                        </div>
+                        <div class="pix-step">
+                            <div class="pix-step-badge">3</div>
+                            <div class="pix-step-content">
+                                Vá na opção <strong>PIX</strong> e escolha <strong>PIX Copia e Cola</strong>.
+                            </div>
+                        </div>
+                        <div class="pix-step">
+                            <div class="pix-step-badge">4</div>
+                            <div class="pix-step-content">
+                                Cole o código copiado, confira o valor e <strong>confirme o pagamento</strong>.
+                            </div>
+                        </div>
                     </div>
-
-                    <div id="file-chosen-box" class="file-selected-box" style="display: none;">
-                        <span id="file-chosen-name" style="word-break: break-all; max-width: 85%;"></span>
-                        <span style="color: #FF192D; cursor: pointer; font-size: 16px; padding: 0 4px;" onclick="cancelFileSelection(event)">✕</span>
+                    <div class="pix-steps-footer">
+                        ⚡ <strong>Liberação instantânea:</strong> Seus créditos TIM serão ativados automaticamente na sua linha.
                     </div>
-
-                    <button id="btn-upload-comp" class="btn-enviar-comp" style="display: none;" onclick="submitComprovante()">
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        <span>Confirmar e Enviar Comprovante</span>
-                    </button>
-
-                    <div id="upload-feedback" class="upload-feedback" style="display: none;"></div>
                 </div>
 
                 <div class="details-box">
@@ -270,86 +328,6 @@
             const toast = document.getElementById('toast');
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2000);
-        }
-
-        // Upload Comprovante Logic
-        let selectedFile = null;
-
-        function onFileSelected(event) {
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
-            selectedFile = files[0];
-
-            document.getElementById('dropzone-box').style.display = 'none';
-            const chosenBox = document.getElementById('file-chosen-box');
-            chosenBox.style.display = 'flex';
-            document.getElementById('file-chosen-name').textContent = selectedFile.name;
-            document.getElementById('btn-upload-comp').style.display = 'flex';
-            document.getElementById('upload-feedback').style.display = 'none';
-        }
-
-        function cancelFileSelection(event) {
-            if (event) event.stopPropagation();
-            selectedFile = null;
-            document.getElementById('comp-file-input').value = '';
-            document.getElementById('file-chosen-box').style.display = 'none';
-            document.getElementById('dropzone-box').style.display = 'flex';
-            document.getElementById('btn-upload-comp').style.display = 'none';
-            document.getElementById('upload-feedback').style.display = 'none';
-        }
-
-        async function submitComprovante() {
-            if (!selectedFile) return;
-
-            const btn = document.getElementById('btn-upload-comp');
-            const feedback = document.getElementById('upload-feedback');
-            btn.disabled = true;
-            btn.innerHTML = 'Enviando...';
-            feedback.style.display = 'none';
-
-            let txId = '';
-            try {
-                const storedPix = sessionStorage.getItem('pixData');
-                if (storedPix) {
-                    const payData = JSON.parse(storedPix);
-                    txId = payData.transactionId || '';
-                }
-            } catch(e) {}
-
-            const formData = new FormData();
-            formData.append('comprovante', selectedFile);
-            formData.append('phone', phone || '');
-            formData.append('value', value || '');
-            formData.append('transactionId', txId);
-            formData.append('type', 'recarga');
-
-            try {
-                const res = await fetch('/api/upload-comprovante', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await res.json();
-
-                if (res.ok && result.success) {
-                    btn.style.display = 'none';
-                    document.getElementById('file-chosen-box').style.display = 'none';
-                    feedback.className = 'upload-feedback success';
-                    feedback.innerHTML = '✅ <strong>Comprovante enviado com sucesso!</strong><br>Aguarde a liberação imediata da sua recarga.';
-                    feedback.style.display = 'block';
-                } else {
-                    feedback.className = 'upload-feedback error';
-                    feedback.textContent = result.message || 'Erro ao enviar comprovante.';
-                    feedback.style.display = 'block';
-                    btn.disabled = false;
-                    btn.textContent = 'Confirmar e Enviar Comprovante';
-                }
-            } catch (err) {
-                feedback.className = 'upload-feedback error';
-                feedback.textContent = 'Erro na conexão. Tente novamente.';
-                feedback.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'Confirmar e Enviar Comprovante';
-            }
         }
     </script>
 </body>

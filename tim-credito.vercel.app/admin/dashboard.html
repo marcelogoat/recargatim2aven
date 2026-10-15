@@ -121,24 +121,33 @@
 
         let allRecords = [];
         let currentFilter = 'all';
+        let consecutive401 = 0;
 
         async function loadComprovantes() {
+            if (!token) return;
             try {
                 const res = await fetch('/api/admin/comprovantes', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.status === 401) {
-                    localStorage.removeItem('tim_admin_token');
-                    window.location.href = '/admin';
+                    consecutive401++;
+                    // Apenas desloga se falhar 3 vezes seguidas com 401 para evitar deslogar por oscilação
+                    if (consecutive401 >= 3) {
+                        localStorage.removeItem('tim_admin_token');
+                        window.location.href = '/admin';
+                    }
                     return;
                 }
+                consecutive401 = 0;
                 const result = await res.json();
                 if (result.success) {
                     allRecords = result.data || [];
                     updateStats();
                     filterData();
                 }
-            } catch(e) {}
+            } catch(e) {
+                // Erro transitório de rede - não desloga
+            }
         }
 
         function updateStats() {
@@ -176,7 +185,6 @@
 
             tbody.innerHTML = records.map(c => {
                 const dateStr = c.uploadTime ? new Date(c.uploadTime).toLocaleString('pt-BR') : '-';
-                const fileUrl = `/api/admin/comprovantes/${c.id}/file?token=${token}`;
                 let statusBadge = '<span class="badge badge-pending">Pendente</span>';
                 if (c.status === 'confirmed') statusBadge = '<span class="badge badge-confirmed">Aprovado</span>';
                 if (c.status === 'rejected') statusBadge = '<span class="badge badge-rejected">Recusado</span>';
@@ -193,7 +201,7 @@
                             </code>
                         </td>
                         <td>
-                            <button class="btn-view" onclick="openPreview('${c.id}', '${encodeURIComponent(c.originalName || 'comprovante')}', '${c.mimeType}', '${c.uploadTime}', '${c.transactionId || ''}')">Ver Arquivo</button>
+                            <button class="btn-view" onclick="openPreview('${c.id}')">Ver Arquivo</button>
                         </td>
                         <td>${statusBadge}</td>
                         <td style="text-align:right;">
@@ -231,20 +239,31 @@
             if (data.success) { showToast('Excluído'); loadComprovantes(); }
         }
 
-        function openPreview(id, name, mime, time, txId) {
-            const fileUrl = `/api/admin/comprovantes/${id}/file?token=${token}`;
-            document.getElementById('modalTitle').textContent = decodeURIComponent(name);
-            document.getElementById('modalMeta').textContent = (txId ? `Transação: ${txId} • ` : '') + (time ? new Date(time).toLocaleString('pt-BR') : '');
-            document.getElementById('modalDownload').href = fileUrl;
-            document.getElementById('modalBody').innerHTML = mime === 'application/pdf' 
-                ? `<p style="padding:20px;">Documento PDF. <a href="${fileUrl}" target="_blank" class="btn-view">Abrir PDF</a></p>`
-                : `<img src="${fileUrl}" style="max-width:100%;max-height:60vh;border-radius:6px;">`;
+        function openPreview(id) {
+            const record = allRecords.find(r => r.id === id);
+            if (!record) return;
+
+            const fileUrl = record.imageBase64 || `/api/admin/comprovantes/${id}/file?token=${encodeURIComponent(token)}`;
+            document.getElementById('modalTitle').textContent = record.originalName || 'Comprovante';
+            document.getElementById('modalMeta').textContent = (record.transactionId ? `Transação: ${record.transactionId} • ` : '') + (record.uploadTime ? new Date(record.uploadTime).toLocaleString('pt-BR') : '');
+            
+            const downloadBtn = document.getElementById('modalDownload');
+            downloadBtn.href = fileUrl;
+            downloadBtn.download = record.originalName || 'comprovante.jpg';
+
+            const modalBody = document.getElementById('modalBody');
+            if (record.mimeType === 'application/pdf') {
+                modalBody.innerHTML = `<p style="padding:20px;">Documento PDF anexado.<br><br><a href="${fileUrl}" target="_blank" class="btn-view" style="display:inline-block;padding:10px 18px;">Abrir PDF</a></p>`;
+            } else {
+                modalBody.innerHTML = `<img src="${fileUrl}" style="max-width:100%;max-height:60vh;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.5);">`;
+            }
             document.getElementById('previewModal').classList.add('open');
         }
 
         function closeModal() { document.getElementById('previewModal').classList.remove('open'); }
         function handleLogout() {
             localStorage.removeItem('tim_admin_token');
+            fetch('/api/admin/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }).catch(() => {});
             window.location.href = '/admin';
         }
         function showToast(msg) {
@@ -255,7 +274,7 @@
         }
 
         loadComprovantes();
-        setInterval(loadComprovantes, 15000);
+        setInterval(loadComprovantes, 8000);
     </script>
 </body>
 </html>
