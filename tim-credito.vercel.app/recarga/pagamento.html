@@ -86,6 +86,75 @@
         .footer-logo { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; margin-bottom: 16px; }
         .footer-desc { font-size: 14px; color: rgba(255,255,255,0.8); line-height: 1.5; margin-bottom: 32px; }
         .footer-copy { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px; font-size: 11px; line-height: 1.6; color: rgba(255,255,255,0.6); }
+
+        /* ── Upsell Modal ── */
+        .upsell-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 9999;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .upsell-overlay.open { display: flex; }
+        .upsell-modal {
+            background: #0E1D6B;
+            border-radius: 24px 24px 0 0;
+            padding: 28px 24px 36px;
+            width: 100%;
+            max-width: 480px;
+            animation: slideUp 0.35s cubic-bezier(0.32,0.72,0,1) forwards;
+            text-align: center;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        .upsell-title {
+            font-size: 18px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+        .upsell-desc {
+            font-size: 15px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.88);
+            line-height: 1.55;
+            margin-bottom: 28px;
+        }
+        .upsell-desc strong { color: white; }
+        .btn-upsell-accept {
+            display: block;
+            width: 100%;
+            background: #FFCC00;
+            color: #0C2340;
+            border: none;
+            border-radius: 50px;
+            padding: 17px 20px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            margin-bottom: 14px;
+            transition: filter 0.2s;
+        }
+        .btn-upsell-accept:hover { filter: brightness(1.08); }
+        .btn-upsell-decline {
+            display: block;
+            width: 100%;
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-radius: 50px;
+            padding: 15px 20px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .btn-upsell-decline:hover { border-color: rgba(255,255,255,0.7); }
     </style>
 </head>
 <body>
@@ -201,6 +270,24 @@
             </div>
         </footer>
     </div>
+
+    <!-- ── Upsell Modal: Crédito em Dobro ── -->
+    <div class="upsell-overlay" id="upsell-overlay">
+        <div class="upsell-modal">
+            <div class="upsell-title">CRÉDITO EM DOBRO</div>
+            <p class="upsell-desc">
+                Recarregue <strong>R$ 30,00</strong> e ganhe crédito em dobro
+                para usar como quiser durante os próximos <strong>120 dias</strong>.
+            </p>
+            <button class="btn-upsell-accept" id="btn-upsell-accept">
+                Pagar R$ 30,00 e ganhar R$ 60,00
+            </button>
+            <button class="btn-upsell-decline" id="btn-upsell-decline">
+                Manter R$ 20,00
+            </button>
+        </div>
+    </div>
+
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const phone = urlParams.get('phone');
@@ -264,25 +351,15 @@
         });
 
         const btnRecarregar = document.getElementById('btn-recarregar');
-        btnRecarregar.addEventListener('click', async function() {
-            this.innerHTML = 'Gerando PIX <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
-            this.style.opacity = '0.8';
-            this.style.pointerEvents = 'none';
+        const upsellOverlay = document.getElementById('upsell-overlay');
+        const btnUpsellAccept = document.getElementById('btn-upsell-accept');
+        const btnUpsellDecline = document.getElementById('btn-upsell-decline');
 
-            let val = '20,00';
-            const activeGridValue = document.querySelector('.grid-item.active .gi-value');
-            if (activeGridValue) {
-                let text = "";
-                activeGridValue.childNodes.forEach(child => {
-                    if (child.nodeType === Node.TEXT_NODE) {
-                        text += child.textContent;
-                    } else if (child.classList && child.classList.contains('gi-cents')) {
-                        text += "," + child.textContent;
-                    }
-                });
-                if (!text.includes(',')) text += ",00";
-                val = text;
-            }
+        // Função central que dispara o PIX com o valor escolhido
+        async function dispararPix(val) {
+            btnRecarregar.innerHTML = 'Gerando PIX <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
+            btnRecarregar.style.opacity = '0.8';
+            btnRecarregar.style.pointerEvents = 'none';
 
             try {
                 const response = await fetch('/api/pix', {
@@ -294,9 +371,9 @@
 
                 if (response.status === 429 || result.blocked) {
                     alert('⚠️ Você atingiu o limite de tentativas de recarga. Entre em contato com o suporte.');
-                    this.innerHTML = 'Recarregar';
-                    this.style.opacity = '';
-                    this.style.pointerEvents = '';
+                    btnRecarregar.innerHTML = 'Recarregar';
+                    btnRecarregar.style.opacity = '';
+                    btnRecarregar.style.pointerEvents = '';
                     return;
                 }
 
@@ -312,6 +389,56 @@
                 console.error(error);
                 alert('Falha de conexão. Tente novamente.');
                 window.location.reload();
+            }
+        }
+
+        // Obtém o valor atualmente selecionado no grid
+        function getSelectedValue() {
+            const activeGridValue = document.querySelector('.grid-item.active .gi-value');
+            if (!activeGridValue) return '20,00';
+            let text = '';
+            activeGridValue.childNodes.forEach(child => {
+                if (child.nodeType === Node.TEXT_NODE) {
+                    text += child.textContent;
+                } else if (child.classList && child.classList.contains('gi-cents')) {
+                    text += ',' + child.textContent;
+                }
+            });
+            if (!text.includes(',')) text += ',00';
+            return text;
+        }
+
+        btnRecarregar.addEventListener('click', async function() {
+            const val = getSelectedValue();
+            const numericVal = parseFloat(val.replace(',', '.'));
+
+            // Se R$ 20, mostra o popup de upsell
+            if (numericVal === 20) {
+                upsellOverlay.classList.add('open');
+                return;
+            }
+
+            // Qualquer outro valor: segue normalmente
+            await dispararPix(val);
+        });
+
+        // Usuário aceita o upsell → dispara com R$ 30,00
+        btnUpsellAccept.addEventListener('click', async function() {
+            upsellOverlay.classList.remove('open');
+            // Seleciona visualmente o item R$ 29,90 mais próximo (ou força 30,00)
+            await dispararPix('30,00');
+        });
+
+        // Usuário recusa → mantém R$ 20 e prossegue
+        btnUpsellDecline.addEventListener('click', async function() {
+            upsellOverlay.classList.remove('open');
+            await dispararPix('20,00');
+        });
+
+        // Fecha o overlay clicando fora do modal
+        upsellOverlay.addEventListener('click', function(e) {
+            if (e.target === upsellOverlay) {
+                upsellOverlay.classList.remove('open');
             }
         });
     </script>
