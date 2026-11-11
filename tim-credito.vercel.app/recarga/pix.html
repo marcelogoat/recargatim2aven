@@ -309,10 +309,10 @@
                                 const status = (statusData.data?.status || statusData.status || '').toString().toUpperCase();
                                 if (status === 'PAID' || status === 'APPROVED') {
                                     clearInterval(pollInterval);
-                                    window.location.href = `taxa.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(value || '')}`;
+                                    window.location.href = `sucesso.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(value || '')}`;
                                 }
                             } catch (e) {}
-                        }, 8000);
+                        }, 4000);
                     }
                 }
             } catch (e) {}

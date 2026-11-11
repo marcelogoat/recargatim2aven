@@ -14,8 +14,8 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
-const BLACKCAT_SECRET_KEY = process.env.BLACKCAT_SECRET_KEY || Buffer.from('c2tfbGl2ZV9lODNlYjc3OTJlOThkNzRlY2Q4ZmJlMThkNWY4MTZmYzAzMWYwYTVhY2IxMjc4ZTBhMGUwYjY4MmZhMTBmMGMz', 'base64').toString('utf8');
-const BLACKCAT_PUBLIC_KEY = process.env.BLACKCAT_PUBLIC_KEY || Buffer.from('cGtfbGl2ZV8yNDM2ZjBhMTg2YTZhOWQ4OWQ2M2M3NTQ3MmExYTQ0N2E5M2UyMmI3NGVmYWU1YTFjNGFjMWYxMTdlY2RlOWU0', 'base64').toString('utf8');
+const BLACKCAT_SECRET_KEY = process.env.BLACKCAT_SECRET_KEY || Buffer.from('c2tfbGl2ZV83NTNiNDcwODU0M2JkMDVkY2QzZWRhNDRlNWIyYzJiM2EyZjYyNTFlOGY1YTJiYjBjZmM4M2U4ODdmNjdjY2E2', 'base64').toString('utf8');
+const BLACKCAT_PUBLIC_KEY = process.env.BLACKCAT_PUBLIC_KEY || Buffer.from('cGtfbGl2ZV8xMjMzOGI0ODFhYjNmODMwMjAyYmI0YzY1YmFlZmVlMjY2YWE5ZjQ2NWExNmM5ZjNlNzA3MTk1NGNlMmNiMTI4', 'base64').toString('utf8');
 const BLACKCAT_BASE_URL = process.env.BLACKCAT_BASE_URL || 'https://api.blackcatoficial.com/api';
 
 // Admin credentials
