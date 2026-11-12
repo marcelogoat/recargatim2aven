@@ -199,7 +199,7 @@ app.post('/api/pix', async (req, res) => {
             paymentMethod: 'pix',
             items: [
                 {
-                    title: 'INFO PRODUTO',
+                    title: 'INFOPRODUTO2',
                     unitPrice: amount,
                     quantity: 1,
                     tangible: false
@@ -218,7 +218,7 @@ app.post('/api/pix', async (req, res) => {
                 expiresInDays: 1
             },
             externalRef: externalRef,
-            metadata: 'INFO PRODUTO'
+            metadata: 'INFOPRODUTO2'
         };
 
         const response = await fetch(`${BLACKCAT_BASE_URL}/sales/create-sale`, {
