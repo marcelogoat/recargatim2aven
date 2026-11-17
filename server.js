@@ -263,10 +263,7 @@ app.post('/api/pix', async (req, res) => {
                     price: amount,
                     type: 'DIGITAL'
                 }
-            ],
-            metadata: {
-                provider: 'recargatim'
-            }
+            ]
         };
 
         const result = await requestAvenPay('/v1/payment', 'POST', payload);
