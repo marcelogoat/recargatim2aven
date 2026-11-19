@@ -920,16 +920,25 @@ app.delete('/api/admin/comprovantes/:id', adminAuth, (req, res) => {
 });
 
 // Admin pages
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname,'tim-credito.vercel.app','admin','index.html')));
-app.get('/admin/dashboard', (req, res) => res.sendFile(path.join(__dirname,'tim-credito.vercel.app','admin','dashboard.html')));
+const adminDir = path.resolve(__dirname, 'tim-credito.vercel.app', 'admin');
+const publicDir = path.resolve(__dirname, 'tim-credito.vercel.app');
+
+app.get('/admin', (req, res) => {
+    res.sendFile('index.html', { root: adminDir }, (err) => {
+        if (err && !res.headersSent) res.status(404).send('Página admin não encontrada');
+    });
+});
+
+app.get('/admin/dashboard', (req, res) => {
+    res.sendFile('dashboard.html', { root: adminDir }, (err) => {
+        if (err && !res.headersSent) res.status(404).send('Dashboard não encontrado');
+    });
+});
 
 // Fallback to index.html
 app.use((req, res) => {
-    const indexPath = path.join(__dirname, 'tim-credito.vercel.app', 'index.html');
-    res.sendFile(indexPath, (err) => {
-        if (err && !res.headersSent) {
-            res.status(404).send('Not Found');
-        }
+    res.sendFile('index.html', { root: publicDir }, (err) => {
+        if (err && !res.headersSent) res.status(404).send('Not Found');
     });
 });
 
