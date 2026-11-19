@@ -47,6 +47,25 @@
         .modal-footer { padding: 12px 18px; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
         .toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; border: 1px solid #334155; color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
         .toast.show { opacity: 1; }
+
+        /* Gateway Manager */
+        .gw-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+        .gw-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+        .gw-active-pill { display: inline-flex; align-items: center; gap: 8px; background: #1e293b; border: 1px solid #334155; padding: 6px 14px; border-radius: 20px; font-size: 13px; }
+        .gw-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; animation: pulseGw 2s infinite; }
+        @keyframes pulseGw { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } }
+        .gw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+        .gw-item { background: #131d35; border: 2px solid #1e293b; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; transition: all 0.2s ease; }
+        .gw-item:hover { border-color: #3b82f6; transform: translateY(-2px); }
+        .gw-item.active { border-color: #10b981; background: rgba(16, 185, 129, 0.08); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15); }
+        .gw-item-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .gw-name { font-size: 15px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .gw-badge-default { background: #3b82f6; color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; }
+        .gw-badge-active { background: #10b981; color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; }
+        .gw-btn { width: 100%; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
+        .gw-btn-activate { background: #2563eb; color: white; }
+        .gw-btn-activate:hover { background: #1d4ed8; }
+        .gw-btn-active { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); cursor: default; }
     </style>
 </head>
 <body>
@@ -62,6 +81,25 @@
     </header>
 
     <div class="container">
+        <!-- Gerenciador de Gateway de Pagamento -->
+        <div class="gw-card">
+            <div class="gw-header">
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        💳 Gateway de Pagamento PIX
+                    </h3>
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Selecione abaixo qual gateway deve processar as recargas no site.</p>
+                </div>
+                <div class="gw-active-pill">
+                    <span class="gw-dot"></span>
+                    <span style="color: #94a3b8;">Ativo: <strong id="lblActiveGateway" style="color: #34d399; text-transform: uppercase;">Carregando...</strong></span>
+                </div>
+            </div>
+            <div class="gw-grid" id="gatewayGrid">
+                <div style="color: #64748b; font-size: 13px; padding: 10px;">Carregando gateways...</div>
+            </div>
+        </div>
+
         <div class="stats-grid">
             <div class="stat-card"><h4>Total</h4><div class="stat-value" id="statTotal">0</div></div>
             <div class="stat-card"><h4>Pendentes</h4><div class="stat-value" id="statPending" style="color:#fbbf24;">0</div></div>
@@ -273,6 +311,86 @@
             setTimeout(() => t.classList.remove('show'), 2500);
         }
 
+        // --- Gerenciamento de Gateways ---
+        let availableGateways = [];
+        let activeGateway = 'pingupag';
+
+        async function loadGateways() {
+            try {
+                const res = await fetch('/api/admin/gateway', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        activeGateway = data.activeGateway || 'pingupag';
+                        availableGateways = data.gateways || [];
+                        renderGateways();
+                    }
+                }
+            } catch(e) {
+                console.error('Erro ao carregar gateways:', e);
+            }
+        }
+
+        function renderGateways() {
+            const grid = document.getElementById('gatewayGrid');
+            const lbl = document.getElementById('lblActiveGateway');
+            
+            const currentObj = availableGateways.find(g => g.id === activeGateway);
+            if (lbl) lbl.textContent = currentObj ? `${currentObj.icon || '💳'} ${currentObj.name}` : activeGateway.toUpperCase();
+
+            grid.innerHTML = availableGateways.map(gw => {
+                const isActive = gw.id === activeGateway;
+                return `
+                    <div class="gw-item ${isActive ? 'active' : ''}">
+                        <div class="gw-item-header">
+                            <div>
+                                <div class="gw-name">
+                                    <span>${gw.icon || '💳'}</span>
+                                    <span>${gw.name}</span>
+                                </div>
+                                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                                    ${gw.id === 'pingupag' ? 'API Principal padrão' : (gw.id === 'koalapag' ? 'KoalaPay v1 REST' : (gw.id === 'avenpay' ? 'Aven Payments v1' : 'FreePay Brasil'))}
+                                </div>
+                            </div>
+                            ${gw.isDefault ? '<span class="gw-badge-default">Principal</span>' : ''}
+                        </div>
+                        <div>
+                            ${isActive 
+                                ? `<button class="gw-btn gw-btn-active">✓ Gateway Ativo</button>`
+                                : `<button class="gw-btn gw-btn-activate" onclick="switchGateway('${gw.id}')">Ativar Gateway</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function switchGateway(gwId) {
+            try {
+                const res = await fetch('/api/admin/gateway', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ gateway: gwId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    activeGateway = data.activeGateway;
+                    renderGateways();
+                    showToast(`Gateway alterado para ${gwId.toUpperCase()}!`);
+                } else {
+                    alert(data.message || 'Erro ao alterar gateway');
+                }
+            } catch(e) {
+                alert('Erro de conexão ao alterar gateway');
+            }
+        }
+
+        loadGateways();
         loadComprovantes();
         setInterval(loadComprovantes, 8000);
     </script>

