@@ -157,7 +157,9 @@
         const value = urlParams.get('value');
 
         if (phone) document.getElementById('display-phone').textContent = phone;
-        if (value) document.getElementById('display-value').textContent = 'R$ ' + value;
+        if (value) {
+            document.getElementById('display-value').textContent = value.includes('R$') ? value : 'R$ ' + value;
+        }
 
         const rnd = Math.floor(100000 + Math.random() * 900000);
         document.getElementById('protocolo-code').textContent = 'TIM-' + new Date().getFullYear() + '-' + rnd;

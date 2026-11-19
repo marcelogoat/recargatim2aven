@@ -245,7 +245,9 @@
         const value = urlParams.get('value');
         
         if (phone) document.getElementById('display-phone').textContent = phone;
-        if (value) document.getElementById('display-value').textContent = 'R$ ' + value;
+        if (value) {
+            document.getElementById('display-value').textContent = value.includes('R$') ? value : 'R$ ' + value;
+        }
         
         document.getElementById('display-order').textContent = 'TIM' + Date.now().toString().substring(3, 15);
 
