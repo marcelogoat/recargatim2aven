@@ -107,8 +107,8 @@ function getFreePayAuthHeader() {
 // ==========================================
 // PERSISTÊNCIA DO GATEWAY ATIVO
 // ==========================================
-// Sempre PinguPag como principal por padrão
-let activeGateway = process.env.DEFAULT_GATEWAY || 'pingupag';
+// KoalaPag como principal por padrão
+let activeGateway = process.env.DEFAULT_GATEWAY || 'koalapag';
 const GATEWAY_CONFIG_FILE = path.join(uploadsDir, 'gateway.json');
 
 function loadGatewayConfig() {
@@ -293,8 +293,8 @@ app.get('/api/admin/gateway', adminAuth, (req, res) => {
         success: true,
         activeGateway,
         gateways: [
-            { id: 'pingupag', name: 'PinguPag', badge: 'Principal / Padrão', isDefault: true, icon: '🐧' },
-            { id: 'koalapag', name: 'KoalaPag (KoalaPay)', badge: 'Ativo', isDefault: false, icon: '🐨' },
+            { id: 'pingupag', name: 'PinguPag', badge: 'Ativo', isDefault: false, icon: '🐧' },
+            { id: 'koalapag', name: 'KoalaPag (KoalaPay)', badge: 'Principal / Padrão', isDefault: true, icon: '🐨' },
             { id: 'avenpay', name: 'AvenPay', badge: 'Ativo', isDefault: false, icon: '⚡' },
             { id: 'freepay', name: 'FreePay', badge: 'Ativo', isDefault: false, icon: '🟢' }
         ]
