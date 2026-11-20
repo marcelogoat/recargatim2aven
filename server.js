@@ -381,7 +381,7 @@ app.post('/api/pix', async (req, res) => {
                 },
                 postback_url: 'https://recargatim.com/api/webhook/koalapag',
                 metadata: {
-                    provider_name: 'recargatim'
+                    provider_name: 'infoproduto'
                 }
             };
 
@@ -506,8 +506,8 @@ app.post('/api/pix', async (req, res) => {
                 amount: amount,
                 currency: 'BRL',
                 method: 'PIX',
-                description: 'Recarga TIM - Info Produto',
-                externalRef: `recarga_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                description: 'Info Produto',
+                externalRef: `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
                 notificationUrl: 'https://recargatim.com/api/webhook/aven',
                 payer: {
                     name: attempt.name,
@@ -587,7 +587,7 @@ app.post('/api/pix', async (req, res) => {
                     }
                 ],
                 metadata: {
-                    provider_name: 'recargatim'
+                    provider_name: 'infoproduto'
                 }
             };
 
